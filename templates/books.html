@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}书架 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h2>书架</h2>
+        <p>查看不同年级的推荐书单，进入书页即可带着同学们一起讨论。</p>
+      </div>
+      <a class="btn secondary" href="{{ url_for('discussions') }}">去讨论区</a>
+    </div>
+  </section>
+
+  {% if grouped_books %}
+    {% for grade in grade_order %}
+      {% set grade_books = grouped_books.get(grade) %}
+      {% if grade_books %}
+        <section class="card">
+          <div class="section-header">
+            <div>
+              <p class="eyebrow">{{ grade }}</p>
+              <h2>{{ grade }}精选书目</h2>
+            </div>
+          </div>
+          <div class="book-grid large">
+            {% for book in grade_books %}
+              <article class="book-card">
+                <img src="{{ book.cover_url or 'https://placehold.co/320x180?text=Book' }}" alt="{{ book.title }}">
+                <div class="book-card-info">
+                  <span class="grade-badge">{{ book.grade }}</span>
+                  <h4>{{ book.title }}</h4>
+                <p class="book-meta">{{ book.author or '作者待定' }} · {{ book.publisher or '出版社待定' }}</p>
+              </div>
+                <a class="btn tertiary" href="{{ url_for('book_detail', slug=book.slug) }}">进入书页</a>
+              </article>
+            {% endfor %}
+          </div>
+        </section>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <section class="card">
+      <p>暂未收录书籍，稍后再来。</p>
+    </section>
+  {% endif %}
+{% endblock %}

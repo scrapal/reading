@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}注册 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card form-card">
+    <h2>创建账号</h2>
+    <form method="post">
+      <label for="username">用户名</label>
+      <input id="username" name="username" required>
+
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" minlength="6" required>
+
+      <button class="btn" type="submit">注册</button>
+    </form>
+  </section>
+{% endblock %}

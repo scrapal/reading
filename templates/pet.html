@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}宠物小屋 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card pet-card">
+    <div class="section-header">
+      <div>
+        <h2>{{ pet.name }}</h2>
+        <p>使用金币来喂养/照顾宠物，保持饱腹与快乐。</p>
+      </div>
+      <div class="coin-balance">当前金币：<strong>{{ coins }}</strong></div>
+    </div>
+    <div class="pet-stats">
+      <div class="stat">
+        <span>饱食度（越高越好）</span>
+        <strong>{{ satiety }}/100</strong>
+      </div>
+      <div class="stat">
+        <span>快乐值</span>
+        <strong>{{ pet.happiness }}/100</strong>
+      </div>
+      <div class="stat">
+        <span>最近照顾时间</span>
+        <strong>{{ pet.last_care_at|friendly_date }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>互动项目</h3>
+    </div>
+    <form class="pet-actions" method="post">
+      {% for key, action in actions.items() %}
+        <button class="action-tile" name="action" value="{{ key }}" type="submit">
+          <div>
+            <h4>{{ action.label }}</h4>
+            <p>{{ action.description }}</p>
+          </div>
+          <div class="action-meta">
+            <span class="badge">耗费 {{ action.cost }} 金币</span>
+            <small>饱食度 {{ '%+d' % (-action.hunger_delta) }}, 快乐 {{ '%+d' % action.happiness_delta }}</small>
+          </div>
+        </button>
+      {% endfor %}
+    </form>
+    <p class="note">温馨提示：金币不足时无法进行互动，请先完成每日任务。</p>
+  </section>
+{% endblock %}

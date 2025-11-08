@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}任务中心 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h2>每日任务</h2>
+        <p>完成下列任务可获得金币，用于在宠物页面购买互动项目。</p>
+      </div>
+      <a class="btn secondary" href="{{ url_for('pet') }}">我的宠物</a>
+    </div>
+    {% if not user %}
+      <p>请先 <a href="{{ url_for('login') }}">登录</a> 后再完成任务。</p>
+    {% endif %}
+    <ul class="task-list">
+      {% for row in task_rows %}
+        <li class="task-item {% if row.completed %}done{% endif %}">
+          <div>
+            <h3>{{ row.task.name }}</h3>
+            <p>{{ row.task.description }}</p>
+          </div>
+          <div class="task-meta">
+            <span class="badge">+{{ row.task.coins_reward }} 金币</span>
+            {% if row.completed %}
+              <span class="status">今日已完成</span>
+            {% elif user %}
+              <form method="post" action="{{ url_for('complete_task', task_id=row.task.id) }}">
+                <button class="btn" type="submit">立即完成</button>
+              </form>
+            {% else %}
+              <span class="status pending">登录后可完成</span>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

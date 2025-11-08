@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}阅读空间 · 首页{% endblock %}
+{% block content %}
+  <section class="card hero">
+    {% if user %}
+      <div>
+        <p class="eyebrow">欢迎回来，{{ user.username }}！</p>
+        <h2>继续完成今日的阅读任务吧。</h2>
+        <p>连续打卡、写读后感、发表书评即可获得金币，用来呵护你的专属宠物。</p>
+        <div class="stats">
+          <div class="stat">
+            <span>我的金币</span>
+            <strong>{{ coins }}</strong>
+          </div>
+          <div class="stat">
+            <span>今日任务</span>
+            <strong>{{ tasks_overview | selectattr('completed') | list | length }}/{{ tasks_overview | length }}</strong>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="btn" href="{{ url_for('tasks') }}">查看任务</a>
+          <a class="btn secondary" href="{{ url_for('pet') }}">照顾宠物</a>
+        </div>
+      </div>
+    {% else %}
+      <div>
+        <p class="eyebrow">新的阅读旅程</p>
+        <h2>注册账号即可开始积累金币</h2>
+        <p>完成每日读书相关任务，兑换金币照顾你的虚拟宠物，让阅读更有仪式感。</p>
+        <div class="actions">
+          <a class="btn" href="{{ url_for('register') }}">立即注册</a>
+          <a class="btn secondary" href="{{ url_for('login') }}">我已有账号</a>
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>今日任务速览</h3>
+      <a href="{{ url_for('tasks') }}">查看全部</a>
+    </div>
+    <ul class="task-list compact">
+      {% for row in tasks_overview %}
+        <li class="task-item {% if row.completed %}done{% endif %}">
+          <div>
+            <h4>{{ row.task.name }}</h4>
+            <p>{{ row.task.description }}</p>
+          </div>
+          <div class="task-meta">
+            <span class="badge">+{{ row.task.coins_reward }} 金币</span>
+            {% if row.completed %}
+              <span class="status">已完成</span>
+            {% else %}
+              <span class="status pending">待完成</span>
+            {% endif %}
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>书架精选</h3>
+      <a href="{{ url_for('books') }}">全部书籍</a>
+    </div>
+    <div class="book-grid">
+      {% for book in featured_books %}
+        <article class="book-card">
+          <img src="{{ book.cover_url or 'https://placehold.co/320x180?text=Book' }}" alt="{{ book.title }}">
+          <div class="book-card-info">
+            <span class="grade-badge">{{ book.grade or '书单' }}</span>
+            <h4>{{ book.title }}</h4>
+            <p class="book-meta">{{ book.author or '作者待定' }}</p>
+          </div>
+          <a class="btn tertiary" href="{{ url_for('book_detail', slug=book.slug) }}">进入书页</a>
+        </article>
+      {% else %}
+        <p>还没有书籍，稍后再来吧。</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>最新讨论</h3>
+      <a href="{{ url_for('discussions') }}">进入讨论区</a>
+    </div>
+    <ul class="discussion-list">
+      {% for comment in latest_comments %}
+        <li class="discussion-item">
+          <div class="avatar">{{ comment.username[0]|upper }}</div>
+          <div>
+            <p class="comment-text">{{ comment.username }}：{{ comment.content }}</p>
+            <div class="comment-meta">
+              <span>{{ comment.created_at|friendly_date }}</span>
+              <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>
+            </div>
+          </div>
+        </li>
+      {% else %}
+        <li>暂无评论，去书页留下你的第一条想法吧。</li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

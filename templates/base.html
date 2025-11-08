@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}阅读空间{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container header-layout">
+        <h1 class="logo"><a href="{{ url_for('index') }}">阅读空间</a></h1>
+        <nav>
+          <ul class="nav-links">
+            <li><a href="{{ url_for('books') }}">书架</a></li>
+            <li><a href="{{ url_for('tasks') }}">任务</a></li>
+            <li><a href="{{ url_for('discussions') }}">讨论</a></li>
+            <li><a href="{{ url_for('pet') }}">宠物</a></li>
+          </ul>
+        </nav>
+        <div class="auth-links">
+          {% if session.get('user_id') %}
+            <span class="welcome">你好，{{ session['username'] }}</span>
+            <a class="mini-btn" href="{{ url_for('logout') }}">退出</a>
+          {% else %}
+            <a class="mini-btn" href="{{ url_for('login') }}">登录</a>
+            <a class="mini-btn secondary" href="{{ url_for('register') }}">注册</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <main class="container main-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="flash-list">
+            {% for category, message in messages %}
+              <li class="flash {{ category }}">{{ message }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">本地原型 · 仅供演示</div>
+    </footer>
+  </body>
+</html>
