@@ -9,8 +9,14 @@
       </div>
       <a class="btn secondary" href="{{ url_for('books') }}">去书架</a>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>{{ category_labels['discussion'] }}版</h3>
+    </div>
     <ul class="discussion-list">
-      {% for comment in comments %}
+      {% for comment in discussion_comments %}
         <li class="discussion-item">
           <div class="avatar">{{ comment.username[0]|upper }}</div>
           <div>
@@ -23,6 +29,28 @@
         </li>
       {% else %}
         <li>暂时没有讨论，去任意书籍页面发表你的第一条评论吧。</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>{{ category_labels['reflection'] }}版</h3>
+    </div>
+    <ul class="discussion-list">
+      {% for comment in reflection_comments %}
+        <li class="discussion-item">
+          <div class="avatar">{{ comment.username[0]|upper }}</div>
+          <div>
+            <p class="comment-text">{{ comment.username }}: {{ comment.content }}</p>
+            <div class="comment-meta">
+              <span>{{ comment.created_at|friendly_date }}</span>
+              <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>
+            </div>
+          </div>
+        </li>
+      {% else %}
+        <li>还没有读后感，去任意书籍页面分享你的感受吧。</li>
       {% endfor %}
     </ul>
   </section>

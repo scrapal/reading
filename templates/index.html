@@ -92,7 +92,10 @@
         <li class="discussion-item">
           <div class="avatar">{{ comment.username[0]|upper }}</div>
           <div>
-            <p class="comment-text">{{ comment.username }}：{{ comment.content }}</p>
+            <p class="comment-text">
+              <span class="category-pill">{{ category_labels.get(comment.category, category_labels['discussion']) }}</span>
+              {{ comment.username }}：{{ comment.content }}
+            </p>
             <div class="comment-meta">
               <span>{{ comment.created_at|friendly_date }}</span>
               <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>

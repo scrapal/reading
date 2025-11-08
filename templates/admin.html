@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+{% block title %}后台管理 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h2>后台管理</h2>
+        <p>在这里可以维护书目、管理评论并分配管理员权限。</p>
+      </div>
+      <div class="badge">当前管理员：{{ admin.username }}</div>
+    </div>
+  </section>
+
+  <section class="card admin-form-card">
+    <div class="section-header">
+      <h3>添加 / 更新书籍</h3>
+    </div>
+    <form class="admin-form" method="post" action="{{ url_for('admin_add_book') }}">
+      <label>书名*
+        <input name="title" required placeholder="书籍名称">
+      </label>
+      <label>自定义 Slug（可选）
+        <input name="slug" placeholder="默认会根据书名生成">
+      </label>
+      <label>作者
+        <input name="author" placeholder="作者">
+      </label>
+      <label>出版社
+        <input name="publisher" placeholder="出版社">
+      </label>
+      <label>适用年级
+        <select name="grade">
+          <option value="">未分级</option>
+          {% for grade in grade_options %}
+            <option value="{{ grade }}">{{ grade }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>封面地址
+        <input name="cover_url" placeholder="支持本地 / 远程地址">
+      </label>
+      <button class="btn" type="submit">保存书籍</button>
+    </form>
+    <div class="recent-books">
+      <h4>最新添加</h4>
+      <ul>
+        {% for book in recent_books %}
+          <li>{{ book.title }} · {{ book.grade or '未分级' }} · <a href="{{ url_for('book_detail', slug=book.slug) }}" target="_blank">预览</a></li>
+        {% else %}
+          <li>暂无数据</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>讨论评论（最新 50 条）</h3>
+    </div>
+    <ul class="discussion-list">
+      {% for comment in admin_discussions %}
+        <li class="discussion-item admin-item">
+          <div class="avatar">{{ comment.username[0]|upper }}</div>
+          <div class="admin-comment">
+            <p class="comment-text">
+              <span class="category-pill">{{ category_labels.get(comment.category, '') }}</span>
+              {{ comment.username }}: {{ comment.content }}
+            </p>
+            <div class="comment-meta">
+              <span>{{ comment.created_at|friendly_date }}</span>
+              <a href="{{ url_for('book_detail', slug=comment.slug) }}" target="_blank">{{ comment.title }}</a>
+            </div>
+          </div>
+          <form class="inline-form" method="post" action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}">
+            <button class="danger-btn" type="submit">删除</button>
+          </form>
+        </li>
+      {% else %}
+        <li>暂无讨论类评论。</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>读后感评论</h3>
+    </div>
+    <ul class="discussion-list">
+      {% for comment in admin_reflections %}
+        <li class="discussion-item admin-item">
+          <div class="avatar">{{ comment.username[0]|upper }}</div>
+          <div class="admin-comment">
+            <p class="comment-text">
+              <span class="category-pill">{{ category_labels.get(comment.category, '') }}</span>
+              {{ comment.username }}: {{ comment.content }}
+            </p>
+            <div class="comment-meta">
+              <span>{{ comment.created_at|friendly_date }}</span>
+              <a href="{{ url_for('book_detail', slug=comment.slug) }}" target="_blank">{{ comment.title }}</a>
+            </div>
+          </div>
+          <form class="inline-form" method="post" action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}">
+            <button class="danger-btn" type="submit">删除</button>
+          </form>
+        </li>
+      {% else %}
+        <li>暂无读后感评论。</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>管理员权限设置</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>用户名</th>
+            <th>金币</th>
+            <th>角色</th>
+            <th>加入时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in admin_users %}
+            <tr>
+              <td>{{ user.username }}</td>
+              <td>
+                <form class="inline-form coin-form" method="post" action="{{ url_for('admin_set_coins', user_id=user.id) }}">
+                  <input type="number" name="coins" min="0" value="{{ user.coins }}">
+                  <button class="ghost-btn" type="submit">保存</button>
+                </form>
+              </td>
+              <td>{% if user.is_admin %}管理员{% else %}普通用户{% endif %}</td>
+              <td>{{ user.created_at|friendly_date }}</td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('admin_toggle_user', user_id=user.id) }}">
+                  {% if user.is_admin %}
+                    <button class="ghost-btn" type="submit">移除管理员</button>
+                  {% else %}
+                    <button class="btn" type="submit">设为管理员</button>
+                  {% endif %}
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

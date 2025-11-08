@@ -9,6 +9,7 @@
       </div>
       <a class="btn secondary" href="{{ url_for('pet') }}">我的宠物</a>
     </div>
+    <p class="note">提示：在任意书籍页面选择“讨论”发表即可完成讨论任务；选择“读后感”并写满 50 字即可完成读后感任务，不能在此直接领取。</p>
     {% if not user %}
       <p>请先 <a href="{{ url_for('login') }}">登录</a> 后再完成任务。</p>
     {% endif %}
@@ -23,6 +24,8 @@
             <span class="badge">+{{ row.task.coins_reward }} 金币</span>
             {% if row.completed %}
               <span class="status">今日已完成</span>
+            {% elif row.task.code in ['write_reflection', 'share_comment'] %}
+              <span class="status pending">前往书页完成对应操作</span>
             {% elif user %}
               <form method="post" action="{{ url_for('complete_task', task_id=row.task.id) }}">
                 <button class="btn" type="submit">立即完成</button>

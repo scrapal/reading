@@ -23,6 +23,51 @@
         <strong>{{ pet.last_care_at|friendly_date }}</strong>
       </div>
     </div>
+    <div class="pet-playground">
+      <div class="pet-field">
+        <div class="pet-path"></div>
+        <div class="pet-character">
+          <div class="pet-face">
+            <span class="eye left"></span>
+            <span class="eye right"></span>
+            <span class="mouth"></span>
+          </div>
+          <div class="pet-body"></div>
+        </div>
+        <div class="pet-sparkle sparkle-1"></div>
+        <div class="pet-sparkle sparkle-2"></div>
+        {% for toy in owned_toys %}
+          <div class="pet-toy" style="left: {{ toy.pos_x }}%; top: {{ toy.pos_y }}%;">
+            <span class="toy-icon">{{ toy.icon }}</span>
+            <span class="toy-label">{{ toy.name }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      <p class="note">小兽在草坪上散步，保持好心情吧！</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>玩具商店</h3>
+    </div>
+    <div class="toy-shop">
+      {% for toy in toy_catalog %}
+        <form class="toy-card" method="post" action="{{ url_for('pet_buy_toy', slug=toy.slug) }}">
+          <div class="toy-icon large">{{ toy.icon }}</div>
+          <div>
+            <h4>{{ toy.name }}</h4>
+            <p>{{ toy.description }}</p>
+            <small>已拥有：{{ toy.owned }}</small>
+          </div>
+          <button class="btn" type="submit" {% if coins < toy.price %}disabled{% endif %}>
+            {{ toy.price }} 金币
+          </button>
+        </form>
+      {% else %}
+        <p>暂无玩具可购买。</p>
+      {% endfor %}
+    </div>
   </section>
 
   <section class="card">
@@ -45,4 +90,27 @@
     </form>
     <p class="note">温馨提示：金币不足时无法进行互动，请先完成每日任务。</p>
   </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const field = document.querySelector('.pet-field');
+      const pet = document.querySelector('.pet-character');
+      if (!field || !pet) return;
+
+      const movePet = () => {
+        const fieldRect = field.getBoundingClientRect();
+        const petRect = pet.getBoundingClientRect();
+        const sidePadding = 25;
+        const groundOffset = 40;
+        const xRange = Math.max(fieldRect.width - petRect.width - sidePadding * 2, 10);
+        const yBaseline = fieldRect.height - petRect.height - groundOffset;
+        const x = Math.random() * xRange + sidePadding;
+        const y = yBaseline + (Math.random() * 10 - 5); // 轻微上下浮动
+        pet.style.transform = `translate(${x}px, ${y}px)`;
+      };
+
+      movePet();
+      setInterval(movePet, 5500);
+    });
+  </script>
 {% endblock %}
