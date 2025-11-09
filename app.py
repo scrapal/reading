@@ -346,16 +346,66 @@ TASK_SEED = [
 ]
 
 PET_APPEARANCES = [
-    {"id": "cat-orange", "name": "橙色小猫", "emoji": "🐱", "color": "#FF8C42"},
-    {"id": "cat-blue", "name": "蓝色小猫", "emoji": "🐱", "color": "#4A90E2"},
-    {"id": "dog-brown", "name": "棕色小狗", "emoji": "🐶", "color": "#A0826D"},
-    {"id": "dog-pink", "name": "粉色小狗", "emoji": "🐶", "color": "#FFB6C1"},
-    {"id": "rabbit-white", "name": "白色兔子", "emoji": "🐰", "color": "#F5F5F5"},
-    {"id": "rabbit-purple", "name": "紫色兔子", "emoji": "🐰", "color": "#9B59B6"},
-    {"id": "bear-brown", "name": "棕色小熊", "emoji": "🐻", "color": "#8B4513"},
-    {"id": "bear-green", "name": "绿色小熊", "emoji": "🐻", "color": "#52C41A"},
-    {"id": "penguin-black", "name": "企鹅宝宝", "emoji": "🐧", "color": "#2C3E50"},
-    {"id": "bird-yellow", "name": "黄色小鸟", "emoji": "🐦", "color": "#FFD700"},
+    {
+        "id": "cat-orange",
+        "name": "橙色小猫",
+        "color": "#FF8C42",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 60 Q50 65 55 60" stroke="#000" stroke-width="2" fill="none"/></svg>'
+    },
+    {
+        "id": "cat-blue",
+        "name": "蓝色小猫",
+        "color": "#4A90E2",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 60 Q50 65 55 60" stroke="#000" stroke-width="2" fill="none"/></svg>'
+    },
+    {
+        "id": "dog-brown",
+        "name": "棕色小狗",
+        "color": "#A0826D",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M50 63 L45 70" stroke="#000" stroke-width="2"/><path d="M50 63 L55 70" stroke="#000" stroke-width="2"/></svg>'
+    },
+    {
+        "id": "dog-pink",
+        "name": "粉色小狗",
+        "color": "#FFB6C1",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M50 63 L45 70" stroke="#000" stroke-width="2"/><path d="M50 63 L55 70" stroke="#000" stroke-width="2"/></svg>'
+    },
+    {
+        "id": "rabbit-white",
+        "name": "白色兔子",
+        "color": "#F5F5F5",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFB6C1"/></svg>'
+    },
+    {
+        "id": "rabbit-purple",
+        "name": "紫色兔子",
+        "color": "#9B59B6",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFF"/></svg>'
+    },
+    {
+        "id": "bear-brown",
+        "name": "棕色小熊",
+        "color": "#8B4513",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#D2691E"/><path d="M45 66 Q50 70 55 66" stroke="#000" stroke-width="2" fill="none"/></svg>'
+    },
+    {
+        "id": "bear-green",
+        "name": "绿色小熊",
+        "color": "#52C41A",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#A8E6A1"/><path d="M45 66 Q50 70 55 66" stroke="#000" stroke-width="2" fill="none"/></svg>'
+    },
+    {
+        "id": "penguin-black",
+        "name": "企鹅宝宝",
+        "color": "#2C3E50",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="55" rx="28" ry="35" fill="currentColor"/><ellipse cx="50" cy="60" rx="20" ry="28" fill="#FFF"/><circle cx="42" cy="45" r="3" fill="#000"/><circle cx="58" cy="45" r="3" fill="#000"/><path d="M47 52 L53 52 L50 56 Z" fill="#FFA500"/><ellipse cx="25" cy="60" rx="6" ry="15" fill="currentColor"/><ellipse cx="75" cy="60" rx="6" ry="15" fill="currentColor"/></svg>'
+    },
+    {
+        "id": "bird-yellow",
+        "name": "黄色小鸟",
+        "color": "#FFD700",
+        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="50" r="25" fill="currentColor"/><circle cx="48" cy="45" r="3" fill="#000"/><circle cx="62" cy="45" r="3" fill="#000"/><path d="M52 52 L58 52 L55 56 Z" fill="#FF8C00"/><ellipse cx="25" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(-20 25 55)"/><ellipse cx="85" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(20 85 55)"/><path d="M55 75 L50 85 L52 75 L48 85 L55 75" fill="currentColor"/></svg>'
+    },
 ]
 
 PET_ACTIONS = {
