@@ -1011,20 +1011,20 @@ def admin_dashboard():
             recent_books = cur.fetchall()
         user_toys = get_all_user_toys()
 
-    grouped_comments = group_comments(comments)
-    all_comment_ids = [row["id"] for row in comments]
-    admin_replies = get_comment_replies(all_comment_ids)
-    return render_template(
-        "admin.html",
-        admin=admin_user,
-        grade_options=GRADE_ORDER,
-        admin_discussions=grouped_comments["discussion"],
-        admin_reflections=grouped_comments["reflection"],
-        admin_users=users,
-        recent_books=recent_books,
-        admin_user_toys=user_toys,
-        admin_replies=admin_replies,
-    )
+        grouped_comments = group_comments(comments)
+        all_comment_ids = [row["id"] for row in comments]
+        admin_replies = get_comment_replies(all_comment_ids)
+        return render_template(
+            "admin.html",
+            admin=admin_user,
+            grade_options=GRADE_ORDER,
+            admin_discussions=grouped_comments["discussion"],
+            admin_reflections=grouped_comments["reflection"],
+            admin_users=users,
+            recent_books=recent_books,
+            admin_user_toys=user_toys,
+            admin_replies=admin_replies,
+        )
 
 
 @app.post("/admin/books/add")
