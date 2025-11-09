@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}申请添加书籍 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h2>申请添加书籍</h2>
+        <p>填写书籍信息并上传封面，管理员审核后将添加到书架。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card admin-form-card">
+    <form class="admin-form" method="post" action="{{ url_for('submit_book_request') }}" enctype="multipart/form-data">
+      <label>书名*
+        <input name="title" required placeholder="书籍名称">
+      </label>
+      <label>作者
+        <input name="author" placeholder="作者">
+      </label>
+      <label>出版社
+        <input name="publisher" placeholder="出版社">
+      </label>
+      <label>适用年级*
+        <select name="grade" required>
+          <option value="">请选择年级</option>
+          <option value="六年级">六年级</option>
+          <option value="七年级">七年级</option>
+          <option value="八年级">八年级</option>
+        </select>
+      </label>
+      <label>封面图片*
+        <input type="file" name="cover_file" accept="image/*" required>
+      </label>
+      <button class="btn" type="submit">提交申请</button>
+    </form>
+  </section>
+
+  {% if my_requests %}
+  <section class="card">
+    <div class="section-header">
+      <h3>我的申请记录</h3>
+    </div>
+    <ul class="discussion-list">
+      {% for req in my_requests %}
+        <li class="discussion-item">
+          <div class="admin-comment">
+            <p class="comment-text">
+              <strong>{{ req.title }}</strong> · {{ req.author or '未知作者' }} · {{ req.grade or '未分级' }}
+            </p>
+            <div class="comment-meta">
+              <span>{{ req.created_at|friendly_date }}</span>
+              {% if req.status == 'pending' %}
+                <span class="category-pill" style="background: #ffa500;">待审核</span>
+              {% elif req.status == 'approved' %}
+                <span class="category-pill" style="background: #4caf50;">已通过</span>
+              {% elif req.status == 'rejected' %}
+                <span class="category-pill" style="background: #f44336;">已拒绝</span>
+              {% endif %}
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+{% endblock %}
