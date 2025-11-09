@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 import random
 import re
-import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import psycopg2
+import psycopg2.extras
+from dotenv import load_dotenv
 from flask import (
     Flask,
     abort,
@@ -19,8 +21,10 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
+load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "reading.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 BOOK_SEED = [
     {
@@ -331,172 +335,236 @@ PET_ACTIONS = {
 }
 
 
-def get_db_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON;")
-    return conn
+def get_db_connection():
+    import time
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            conn = psycopg2.connect(
+                DATABASE_URL,
+                connect_timeout=30,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=5
+            )
+            conn.cursor_factory = psycopg2.extras.RealDictCursor
+            return conn
+        except psycopg2.OperationalError as e:
+            if attempt < max_retries - 1:
+                print(f"连接失败，{3-attempt} 秒后重试... (尝试 {attempt + 1}/{max_retries})")
+                time.sleep(3)
+            else:
+                raise
 
 
-def ensure_column(conn: sqlite3.Connection, table: str, column: str, definition: str) -> None:
-    columns = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
-    if column not in columns:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition};")
-
-
-def seed_books(conn: sqlite3.Connection) -> None:
-    for book in BOOK_SEED:
-        conn.execute(
+def ensure_column(conn, table: str, column: str, definition: str) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
             """
-            INSERT INTO books (slug, title, cover_url, author, publisher, grade)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(slug) DO UPDATE SET
-                title = excluded.title,
-                cover_url = excluded.cover_url,
-                author = excluded.author,
-                publisher = excluded.publisher,
-                grade = excluded.grade
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = %s AND column_name = %s
             """,
-            (
-                book["slug"],
-                book["title"],
-                book["cover_url"],
-                book["author"],
-                book["publisher"],
-                book["grade"],
-            ),
+            (table, column),
         )
+        if not cur.fetchone():
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
 
-def seed_tasks(conn: sqlite3.Connection) -> None:
-    for task in TASK_SEED:
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO tasks (code, name, description, coins_reward)
-            VALUES (?, ?, ?, ?)
-            """,
-            (task["code"], task["name"], task["description"], task["coins_reward"]),
-        )
+def seed_books(conn) -> None:
+    with conn.cursor() as cur:
+        for book in BOOK_SEED:
+            cur.execute(
+                """
+                INSERT INTO books (slug, title, cover_url, author, publisher, grade)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT(slug) DO UPDATE SET
+                    title = EXCLUDED.title,
+                    cover_url = EXCLUDED.cover_url,
+                    author = EXCLUDED.author,
+                    publisher = EXCLUDED.publisher,
+                    grade = EXCLUDED.grade
+                """,
+                (
+                    book["slug"],
+                    book["title"],
+                    book["cover_url"],
+                    book["author"],
+                    book["publisher"],
+                    book["grade"],
+                ),
+            )
 
 
-def seed_toys(conn: sqlite3.Connection) -> None:
-    for toy in TOY_SEED:
-        conn.execute(
-            """
-            INSERT INTO toys (slug, name, price, icon, description)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(slug) DO UPDATE SET
-                name = excluded.name,
-                price = excluded.price,
-                icon = excluded.icon,
-                description = excluded.description
-            """,
-            (
-                toy["slug"],
-                toy["name"],
-                toy["price"],
-                toy["icon"],
-                toy["description"],
-            ),
-        )
+def seed_tasks(conn) -> None:
+    with conn.cursor() as cur:
+        for task in TASK_SEED:
+            cur.execute(
+                """
+                INSERT INTO tasks (code, name, description, coins_reward)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (code) DO NOTHING
+                """,
+                (task["code"], task["name"], task["description"], task["coins_reward"]),
+            )
+
+
+def seed_toys(conn) -> None:
+    with conn.cursor() as cur:
+        for toy in TOY_SEED:
+            cur.execute(
+                """
+                INSERT INTO toys (slug, name, price, icon, description)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT(slug) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    price = EXCLUDED.price,
+                    icon = EXCLUDED.icon,
+                    description = EXCLUDED.description
+                """,
+                (
+                    toy["slug"],
+                    toy["name"],
+                    toy["price"],
+                    toy["icon"],
+                    toy["description"],
+                ),
+            )
 
 
 def init_db() -> None:
-    DB_PATH.touch(exist_ok=True)
-    with get_db_connection() as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                coins INTEGER DEFAULT 0,
-                avatar TEXT,
-                is_admin INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    coins INTEGER DEFAULT 0,
+                    avatar TEXT,
+                    is_admin INTEGER DEFAULT 0,
+                    language TEXT DEFAULT 'zh',
+                    last_username_change TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS books (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                slug TEXT UNIQUE NOT NULL,
-                cover_url TEXT,
-                author TEXT,
-                publisher TEXT,
-                grade TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS books (
+                    id SERIAL PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    slug TEXT UNIQUE NOT NULL,
+                    cover_url TEXT,
+                    author TEXT,
+                    publisher TEXT,
+                    grade TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS comments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                book_id INTEGER NOT NULL,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS comments (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    book_id INTEGER NOT NULL,
+                    content TEXT NOT NULL,
+                    category TEXT DEFAULT 'discussion',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS tasks (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                code TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                description TEXT,
-                coins_reward INTEGER DEFAULT 5
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id SERIAL PRIMARY KEY,
+                    code TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    coins_reward INTEGER DEFAULT 5
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS task_completions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                task_id INTEGER NOT NULL,
-                completion_date TEXT NOT NULL,
-                completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (user_id, task_id, completion_date),
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS task_completions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    task_id INTEGER NOT NULL,
+                    completion_date TEXT NOT NULL,
+                    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (user_id, task_id, completion_date),
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS pets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER UNIQUE NOT NULL,
-                name TEXT NOT NULL DEFAULT '小书兽',
-                hunger INTEGER DEFAULT 50,
-                happiness INTEGER DEFAULT 55,
-                last_care_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS pets (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER UNIQUE NOT NULL,
+                    name TEXT NOT NULL DEFAULT '小书兽',
+                    hunger INTEGER DEFAULT 50,
+                    happiness INTEGER DEFAULT 55,
+                    last_care_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS toys (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                slug TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                price INTEGER NOT NULL,
-                icon TEXT,
-                description TEXT
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS toys (
+                    id SERIAL PRIMARY KEY,
+                    slug TEXT UNIQUE NOT NULL,
+                    name TEXT NOT NULL,
+                    price INTEGER NOT NULL,
+                    icon TEXT,
+                    description TEXT
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS user_toys (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                toy_id INTEGER NOT NULL,
-                pos_x REAL NOT NULL,
-                pos_y REAL NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-                FOREIGN KEY (toy_id) REFERENCES toys(id) ON DELETE CASCADE
-            );
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_toys (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    toy_id INTEGER NOT NULL,
+                    pos_x REAL NOT NULL,
+                    pos_y REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (toy_id) REFERENCES toys(id) ON DELETE CASCADE
+                )
+                """
+            )
 
-            CREATE TABLE IF NOT EXISTS comment_replies (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                comment_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
-                content TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
-                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-            );
-            """
-        )
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS comment_replies (
+                    id SERIAL PRIMARY KEY,
+                    comment_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                )
+                """
+            )
+
         ensure_column(conn, "users", "coins", "INTEGER DEFAULT 0")
         ensure_column(conn, "users", "avatar", "TEXT")
         ensure_column(conn, "users", "is_admin", "INTEGER DEFAULT 0")
@@ -510,6 +578,8 @@ def init_db() -> None:
         seed_tasks(conn)
         seed_toys(conn)
         conn.commit()
+    finally:
+        conn.close()
 
 
 app = Flask(__name__)
@@ -527,10 +597,12 @@ def current_user():
     if not user_id:
         return None
     with get_db_connection() as conn:
-        return conn.execute(
-            "SELECT id, username, coins, is_admin FROM users WHERE id = ?",
-            (user_id,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, coins, is_admin FROM users WHERE id = %s",
+                (user_id,),
+            )
+            return cur.fetchone()
 
 
 def require_admin():
@@ -546,24 +618,27 @@ def today_str() -> str:
 
 def get_tasks_status(user_id: int | None):
     with get_db_connection() as conn:
-        tasks = conn.execute(
-            "SELECT id, name, description, coins_reward FROM tasks ORDER BY id"
-        ).fetchall()
-        if not user_id:
-            return [
-                {
-                    "task": task,
-                    "completed": False,
-                }
-                for task in tasks
-            ]
-        completed_rows = conn.execute(
-            """
-            SELECT task_id FROM task_completions
-            WHERE user_id = ? AND completion_date = ?
-            """,
-            (user_id, today_str()),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, name, description, coins_reward FROM tasks ORDER BY id"
+            )
+            tasks = cur.fetchall()
+            if not user_id:
+                return [
+                    {
+                        "task": task,
+                        "completed": False,
+                    }
+                    for task in tasks
+                ]
+            cur.execute(
+                """
+                SELECT task_id FROM task_completions
+                WHERE user_id = %s AND completion_date = %s
+                """,
+                (user_id, today_str()),
+            )
+            completed_rows = cur.fetchall()
     completed_ids = {row["task_id"] for row in completed_rows}
     return [
         {
@@ -576,29 +651,31 @@ def get_tasks_status(user_id: int | None):
 
 def award_task_completion(user_id: int, task_code: str):
     with get_db_connection() as conn:
-        task = conn.execute(
-            "SELECT id, name, coins_reward FROM tasks WHERE code = ?",
-            (task_code,),
-        ).fetchone()
-        if not task:
-            return None
-
-        today = today_str()
-        try:
-            conn.execute(
-                """
-                INSERT INTO task_completions (user_id, task_id, completion_date)
-                VALUES (?, ?, ?)
-                """,
-                (user_id, task["id"], today),
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, name, coins_reward FROM tasks WHERE code = %s",
+                (task_code,),
             )
-        except sqlite3.IntegrityError:
-            return None
+            task = cur.fetchone()
+            if not task:
+                return None
 
-        conn.execute(
-            "UPDATE users SET coins = coins + ? WHERE id = ?",
-            (task["coins_reward"], user_id),
-        )
+            today = today_str()
+            try:
+                cur.execute(
+                    """
+                    INSERT INTO task_completions (user_id, task_id, completion_date)
+                    VALUES (%s, %s, %s)
+                    """,
+                    (user_id, task["id"], today),
+                )
+            except psycopg2.IntegrityError:
+                return None
+
+            cur.execute(
+                "UPDATE users SET coins = coins + %s WHERE id = %s",
+                (task["coins_reward"], user_id),
+            )
         conn.commit()
         return task
 
@@ -612,7 +689,7 @@ def normalize_category(value: str | None) -> str:
     return value if value in COMMENT_CATEGORIES else "discussion"
 
 
-def group_comments(rows: list[sqlite3.Row]):
+def group_comments(rows: list):
     grouped = {key: [] for key in COMMENT_CATEGORIES}
     for row in rows:
         grouped[normalize_category(row["category"] )].append(row)
@@ -621,30 +698,35 @@ def group_comments(rows: list[sqlite3.Row]):
 
 def get_user_toys(user_id: int):
     with get_db_connection() as conn:
-        return conn.execute(
-            """
-            SELECT user_toys.id, user_toys.pos_x, user_toys.pos_y, user_toys.created_at,
-                   toys.name, toys.icon, toys.slug
-            FROM user_toys
-            JOIN toys ON toys.id = user_toys.toy_id
-            WHERE user_toys.user_id = ?
-            ORDER BY user_toys.created_at DESC
-            """,
-            (user_id,),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT user_toys.id, user_toys.pos_x, user_toys.pos_y, user_toys.created_at,
+                       toys.name, toys.icon, toys.slug
+                FROM user_toys
+                JOIN toys ON toys.id = user_toys.toy_id
+                WHERE user_toys.user_id = %s
+                ORDER BY user_toys.created_at DESC
+                """,
+                (user_id,),
+            )
+            return cur.fetchall()
 
 
 def get_available_toys(user_id: int | None):
     with get_db_connection() as conn:
-        toys = conn.execute(
-            "SELECT id, slug, name, price, icon, description FROM toys ORDER BY price"
-        ).fetchall()
-        if not user_id:
-            return toys
-        owned_counts = conn.execute(
-            "SELECT toy_id, COUNT(*) as cnt FROM user_toys WHERE user_id = ? GROUP BY toy_id",
-            (user_id,),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, slug, name, price, icon, description FROM toys ORDER BY price"
+            )
+            toys = cur.fetchall()
+            if not user_id:
+                return toys
+            cur.execute(
+                "SELECT toy_id, COUNT(*) as cnt FROM user_toys WHERE user_id = %s GROUP BY toy_id",
+                (user_id,),
+            )
+            owned_counts = cur.fetchall()
     owned_map = {row["toy_id"]: row["cnt"] for row in owned_counts}
     result = []
     for toy in toys:
@@ -662,38 +744,42 @@ def get_available_toys(user_id: int | None):
 
 def get_all_user_toys(limit: int = 50):
     with get_db_connection() as conn:
-        return conn.execute(
-            """
-            SELECT user_toys.id, user_toys.pos_x, user_toys.pos_y, user_toys.created_at,
-                   users.username, users.id AS owner_id,
-                   toys.name AS toy_name, toys.icon
-            FROM user_toys
-            JOIN users ON users.id = user_toys.user_id
-            JOIN toys ON toys.id = user_toys.toy_id
-            ORDER BY user_toys.created_at DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT user_toys.id, user_toys.pos_x, user_toys.pos_y, user_toys.created_at,
+                       users.username, users.id AS owner_id,
+                       toys.name AS toy_name, toys.icon
+                FROM user_toys
+                JOIN users ON users.id = user_toys.user_id
+                JOIN toys ON toys.id = user_toys.toy_id
+                ORDER BY user_toys.created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            return cur.fetchall()
 
 
 def get_comment_replies(comment_ids: list[int]):
     if not comment_ids:
         return {}
-    placeholders = ",".join(["?"] * len(comment_ids))
+    placeholders = ",".join(["%s"] * len(comment_ids))
     with get_db_connection() as conn:
-        rows = conn.execute(
-            f"""
-            SELECT comment_replies.id, comment_replies.comment_id, comment_replies.user_id, comment_replies.content,
-                   comment_replies.created_at, users.username
-            FROM comment_replies
-            JOIN users ON users.id = comment_replies.user_id
-            WHERE comment_replies.comment_id IN ({placeholders})
-            ORDER BY comment_replies.created_at ASC
-            """,
-            tuple(comment_ids),
-        ).fetchall()
-    grouped: dict[int, list[sqlite3.Row]] = {cid: [] for cid in comment_ids}
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT comment_replies.id, comment_replies.comment_id, comment_replies.user_id, comment_replies.content,
+                       comment_replies.created_at, users.username
+                FROM comment_replies
+                JOIN users ON users.id = comment_replies.user_id
+                WHERE comment_replies.comment_id IN ({placeholders})
+                ORDER BY comment_replies.created_at ASC
+                """,
+                tuple(comment_ids),
+            )
+            rows = cur.fetchall()
+    grouped: dict[int, list] = {cid: [] for cid in comment_ids}
     for row in rows:
         grouped.setdefault(row["comment_id"], []).append(row)
     return grouped
@@ -724,25 +810,28 @@ def inject_globals():
 def index():
     user = current_user()
     with get_db_connection() as conn:
-        featured_books = conn.execute(
-            """
-            SELECT id, title, slug, cover_url, author, grade
-            FROM books
-            ORDER BY id
-            LIMIT 4
-            """
-        ).fetchall()
-        latest_comments = conn.execute(
-            """
-            SELECT comments.content, comments.created_at, comments.category,
-                   users.username, books.title, books.slug
-            FROM comments
-            JOIN users ON users.id = comments.user_id
-            JOIN books ON books.id = comments.book_id
-            ORDER BY comments.created_at DESC
-            LIMIT 5
-            """
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, title, slug, cover_url, author, grade
+                FROM books
+                ORDER BY id
+                LIMIT 4
+                """
+            )
+            featured_books = cur.fetchall()
+            cur.execute(
+                """
+                SELECT comments.content, comments.created_at, comments.category,
+                       users.username, books.title, books.slug
+                FROM comments
+                JOIN users ON users.id = comments.user_id
+                JOIN books ON books.id = comments.book_id
+                ORDER BY comments.created_at DESC
+                LIMIT 5
+                """
+            )
+            latest_comments = cur.fetchall()
     tasks_overview = get_tasks_status(user["id"]) if user else get_tasks_status(None)
     return render_template(
         "index.html",
@@ -757,19 +846,21 @@ def index():
 @app.route("/books")
 def books():
     with get_db_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, title, slug, cover_url, author, publisher, grade
-            FROM books
-            ORDER BY CASE grade
-                WHEN '六年级' THEN 0
-                WHEN '七年级' THEN 1
-                WHEN '八年级' THEN 2
-                ELSE 3 END, title
-            """
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, title, slug, cover_url, author, publisher, grade
+                FROM books
+                ORDER BY CASE grade
+                    WHEN '六年级' THEN 0
+                    WHEN '七年级' THEN 1
+                    WHEN '八年级' THEN 2
+                    ELSE 3 END, title
+                """
+            )
+            rows = cur.fetchall()
 
-    grouped: dict[str, list[sqlite3.Row]] = {}
+    grouped: dict[str, list] = {}
     for row in rows:
         grade = row["grade"] or "未分级"
         grouped.setdefault(grade, []).append(row)
@@ -787,36 +878,39 @@ def books():
 @app.route("/books/<slug>", methods=["GET", "POST"])
 def book_detail(slug: str):
     with get_db_connection() as conn:
-        book = conn.execute(
-            """
-            SELECT id, title, slug, cover_url, author, publisher, grade
-            FROM books
-            WHERE slug = ?
-            """,
-            (slug,),
-        ).fetchone()
-        if not book:
-            abort(404)
-
-        if request.method == "POST":
-            if not is_logged_in():
-                flash("请先登录再发表评论。", "error")
-                return redirect(url_for("login"))
-
-            content = request.form.get("content", "").strip()
-            if not content:
-                flash("评论内容不能为空。", "error")
-                return redirect(url_for("book_detail", slug=slug))
-
-            category = normalize_category(request.form.get("category"))
-            conn.execute(
+        with conn.cursor() as cur:
+            cur.execute(
                 """
-                INSERT INTO comments (user_id, book_id, content, category)
-                VALUES (?, ?, ?, ?)
+                SELECT id, title, slug, cover_url, author, publisher, grade
+                FROM books
+                WHERE slug = %s
                 """,
-                (session["user_id"], book["id"], content, category),
+                (slug,),
             )
-            conn.commit()
+            book = cur.fetchone()
+            if not book:
+                abort(404)
+
+            if request.method == "POST":
+                if not is_logged_in():
+                    flash("请先登录再发表评论。", "error")
+                    return redirect(url_for("login"))
+
+                content = request.form.get("content", "").strip()
+                if not content:
+                    flash("评论内容不能为空。", "error")
+                    return redirect(url_for("book_detail", slug=slug))
+
+                category = normalize_category(request.form.get("category"))
+                cur.execute(
+                    """
+                    INSERT INTO comments (user_id, book_id, content, category)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (session["user_id"], book["id"], content, category),
+                )
+        conn.commit()
+        if request.method == "POST":
             reward_notes = []
             user_id = session["user_id"]
             if category == "discussion":
@@ -841,16 +935,18 @@ def book_detail(slug: str):
             flash(message, "success")
             return redirect(url_for("book_detail", slug=slug))
 
-        comments = conn.execute(
-            """
-            SELECT comments.id, comments.user_id, comments.content, comments.created_at, comments.category, users.username
-            FROM comments
-            JOIN users ON users.id = comments.user_id
-            WHERE comments.book_id = ?
-            ORDER BY comments.created_at DESC
-            """,
-            (book["id"],),
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT comments.id, comments.user_id, comments.content, comments.created_at, comments.category, users.username
+                FROM comments
+                JOIN users ON users.id = comments.user_id
+                WHERE comments.book_id = %s
+                ORDER BY comments.created_at DESC
+                """,
+                (book["id"],),
+            )
+            comments = cur.fetchall()
 
     grouped = group_comments(comments)
     replies_map = get_comment_replies([row["id"] for row in comments])
@@ -866,16 +962,18 @@ def book_detail(slug: str):
 @app.route("/discussions")
 def discussions():
     with get_db_connection() as conn:
-        thread = conn.execute(
-            """
-            SELECT comments.id, comments.user_id, comments.content, comments.created_at, comments.category,
-                   users.username, books.title, books.slug
-            FROM comments
-            JOIN users ON users.id = comments.user_id
-            JOIN books ON books.id = comments.book_id
-            ORDER BY comments.created_at DESC
-            """
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT comments.id, comments.user_id, comments.content, comments.created_at, comments.category,
+                       users.username, books.title, books.slug
+                FROM comments
+                JOIN users ON users.id = comments.user_id
+                JOIN books ON books.id = comments.book_id
+                ORDER BY comments.created_at DESC
+                """
+            )
+            thread = cur.fetchall()
     grouped = group_comments(thread)
     replies_map = get_comment_replies([row["id"] for row in thread])
     return render_template(
@@ -890,23 +988,27 @@ def discussions():
 def admin_dashboard():
     admin_user = require_admin()
     with get_db_connection() as conn:
-        comments = conn.execute(
-            """
-            SELECT comments.id, comments.content, comments.category, comments.created_at,
-                   users.username, books.title, books.slug
-            FROM comments
-            JOIN users ON users.id = comments.user_id
-            JOIN books ON books.id = comments.book_id
-            ORDER BY comments.created_at DESC
-            LIMIT 50
-            """
-        ).fetchall()
-        users = conn.execute(
-            "SELECT id, username, is_admin, created_at, coins FROM users ORDER BY created_at DESC"
-        ).fetchall()
-        recent_books = conn.execute(
-            "SELECT id, title, slug, grade FROM books ORDER BY created_at DESC LIMIT 12"
-        ).fetchall()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT comments.id, comments.content, comments.category, comments.created_at,
+                       users.username, books.title, books.slug
+                FROM comments
+                JOIN users ON users.id = comments.user_id
+                JOIN books ON books.id = comments.book_id
+                ORDER BY comments.created_at DESC
+                LIMIT 50
+                """
+            )
+            comments = cur.fetchall()
+            cur.execute(
+                "SELECT id, username, is_admin, created_at, coins FROM users ORDER BY created_at DESC"
+            )
+            users = cur.fetchall()
+            cur.execute(
+                "SELECT id, title, slug, grade FROM books ORDER BY created_at DESC LIMIT 12"
+            )
+            recent_books = cur.fetchall()
         user_toys = get_all_user_toys()
 
     grouped_comments = group_comments(comments)
@@ -944,19 +1046,20 @@ def admin_add_book():
         return redirect(url_for("admin_dashboard"))
 
     with get_db_connection() as conn:
-        conn.execute(
-            """
-            INSERT INTO books (slug, title, cover_url, author, publisher, grade)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(slug) DO UPDATE SET
-                title=excluded.title,
-                cover_url=excluded.cover_url,
-                author=excluded.author,
-                publisher=excluded.publisher,
-                grade=excluded.grade
-            """,
-            (slug_value, title, cover_url, author, publisher, grade or None),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO books (slug, title, cover_url, author, publisher, grade)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT(slug) DO UPDATE SET
+                    title=EXCLUDED.title,
+                    cover_url=EXCLUDED.cover_url,
+                    author=EXCLUDED.author,
+                    publisher=EXCLUDED.publisher,
+                    grade=EXCLUDED.grade
+                """,
+                (slug_value, title, cover_url, author, publisher, grade or None),
+            )
         conn.commit()
 
     flash("书籍信息已保存。", "success")
@@ -967,13 +1070,15 @@ def admin_add_book():
 def admin_delete_book(book_id: int):
     require_admin()
     with get_db_connection() as conn:
-        deleted = conn.execute(
-            "DELETE FROM books WHERE id = ?",
-            (book_id,),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM books WHERE id = %s",
+                (book_id,),
+            )
+            deleted_count = cur.rowcount
         conn.commit()
 
-    if deleted.rowcount:
+    if deleted_count:
         flash("书籍已删除。", "success")
     else:
         flash("未找到该书籍。", "error")
@@ -984,13 +1089,15 @@ def admin_delete_book(book_id: int):
 def admin_delete_comment(comment_id: int):
     require_admin()
     with get_db_connection() as conn:
-        deleted = conn.execute(
-            "DELETE FROM comments WHERE id = ?",
-            (comment_id,),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM comments WHERE id = %s",
+                (comment_id,),
+            )
+            deleted_count = cur.rowcount
         conn.commit()
 
-    if deleted.rowcount:
+    if deleted_count:
         flash("评论已删除。", "success")
     else:
         flash("未找到要删除的评论。", "error")
@@ -1001,26 +1108,29 @@ def admin_delete_comment(comment_id: int):
 def admin_toggle_user(user_id: int):
     current_admin = require_admin()
     with get_db_connection() as conn:
-        user = conn.execute(
-            "SELECT id, username, is_admin FROM users WHERE id = ?",
-            (user_id,),
-        ).fetchone()
-        if not user:
-            abort(404)
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, is_admin FROM users WHERE id = %s",
+                (user_id,),
+            )
+            user = cur.fetchone()
+            if not user:
+                abort(404)
 
-        if user["is_admin"]:
-            admin_count = conn.execute(
-                "SELECT COUNT(*) FROM users WHERE is_admin = 1"
-            ).fetchone()[0]
-            if admin_count <= 1:
-                flash("至少需要保留一名管理员。", "error")
-                return redirect(url_for("admin_dashboard"))
+            if user["is_admin"]:
+                cur.execute(
+                    "SELECT COUNT(*) FROM users WHERE is_admin = 1"
+                )
+                admin_count = cur.fetchone()[0]
+                if admin_count <= 1:
+                    flash("至少需要保留一名管理员。", "error")
+                    return redirect(url_for("admin_dashboard"))
 
-        new_value = 0 if user["is_admin"] else 1
-        conn.execute(
-            "UPDATE users SET is_admin = ? WHERE id = ?",
-            (new_value, user_id),
-        )
+            new_value = 0 if user["is_admin"] else 1
+            cur.execute(
+                "UPDATE users SET is_admin = %s WHERE id = %s",
+                (new_value, user_id),
+            )
         conn.commit()
 
     if user_id == session.get("user_id"):
@@ -1042,13 +1152,15 @@ def admin_set_coins(user_id: int):
 
     coins_value = max(0, coins_value)
     with get_db_connection() as conn:
-        updated = conn.execute(
-            "UPDATE users SET coins = ? WHERE id = ?",
-            (coins_value, user_id),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET coins = %s WHERE id = %s",
+                (coins_value, user_id),
+            )
+            updated_count = cur.rowcount
         conn.commit()
 
-    if updated.rowcount:
+    if updated_count:
         flash("金币已更新。", "success")
     else:
         flash("未找到该用户。", "error")
@@ -1063,23 +1175,26 @@ def admin_delete_user(user_id: int):
         return redirect(url_for("admin_dashboard"))
 
     with get_db_connection() as conn:
-        user = conn.execute(
-            "SELECT id, username, is_admin FROM users WHERE id = ?",
-            (user_id,),
-        ).fetchone()
-        if not user:
-            flash("未找到该用户。", "error")
-            return redirect(url_for("admin_dashboard"))
-
-        if user["is_admin"]:
-            admin_count = conn.execute(
-                "SELECT COUNT(*) FROM users WHERE is_admin = 1"
-            ).fetchone()[0]
-            if admin_count <= 1:
-                flash("至少需要保留一名管理员。", "error")
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, is_admin FROM users WHERE id = %s",
+                (user_id,),
+            )
+            user = cur.fetchone()
+            if not user:
+                flash("未找到该用户。", "error")
                 return redirect(url_for("admin_dashboard"))
 
-        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+            if user["is_admin"]:
+                cur.execute(
+                    "SELECT COUNT(*) FROM users WHERE is_admin = 1"
+                )
+                admin_count = cur.fetchone()[0]
+                if admin_count <= 1:
+                    flash("至少需要保留一名管理员。", "error")
+                    return redirect(url_for("admin_dashboard"))
+
+            cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
         conn.commit()
 
     flash("用户账户已删除。", "success")
@@ -1090,13 +1205,15 @@ def admin_delete_user(user_id: int):
 def admin_delete_user_toy(user_toy_id: int):
     require_admin()
     with get_db_connection() as conn:
-        deleted = conn.execute(
-            "DELETE FROM user_toys WHERE id = ?",
-            (user_toy_id,),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM user_toys WHERE id = %s",
+                (user_toy_id,),
+            )
+            deleted_count = cur.rowcount
         conn.commit()
 
-    if deleted.rowcount:
+    if deleted_count:
         flash("玩具已移除。", "success")
     else:
         flash("未找到该玩具记录。", "error")
@@ -1107,13 +1224,15 @@ def admin_delete_user_toy(user_toy_id: int):
 def admin_delete_reply(reply_id: int):
     require_admin()
     with get_db_connection() as conn:
-        deleted = conn.execute(
-            "DELETE FROM comment_replies WHERE id = ?",
-            (reply_id,),
-        )
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM comment_replies WHERE id = %s",
+                (reply_id,),
+            )
+            deleted_count = cur.rowcount
         conn.commit()
 
-    if deleted.rowcount:
+    if deleted_count:
         flash("回复已删除。", "success")
     else:
         flash("未找到该回复。", "error")
@@ -1135,12 +1254,14 @@ def complete_task(task_id: int):
 
     user_id = session["user_id"]
     with get_db_connection() as conn:
-        task = conn.execute(
-            "SELECT id, code, name, coins_reward FROM tasks WHERE id = ?",
-            (task_id,),
-        ).fetchone()
-        if not task:
-            abort(404)
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, code, name, coins_reward FROM tasks WHERE id = %s",
+                (task_id,),
+            )
+            task = cur.fetchone()
+            if not task:
+                abort(404)
 
     if task["code"] in AUTO_COMMENT_TASKS:
         flash("该任务需要在书籍页面通过讨论或读后感自动完成。", "error")
@@ -1162,24 +1283,30 @@ def pet():
 
     user_id = session["user_id"]
     with get_db_connection() as conn:
-        user = conn.execute(
-            "SELECT id, username, coins FROM users WHERE id = ?",
-            (user_id,),
-        ).fetchone()
-        pet_row = conn.execute(
-            "SELECT * FROM pets WHERE user_id = ?",
-            (user_id,),
-        ).fetchone()
-        if not pet_row:
-            conn.execute(
-                "INSERT INTO pets (user_id, name, hunger, happiness) VALUES (?, ?, 50, 60)",
-                (user_id, f"{user['username']}的小兽"),
-            )
-            conn.commit()
-            pet_row = conn.execute(
-                "SELECT * FROM pets WHERE user_id = ?",
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, coins FROM users WHERE id = %s",
                 (user_id,),
-            ).fetchone()
+            )
+            user = cur.fetchone()
+            cur.execute(
+                "SELECT * FROM pets WHERE user_id = %s",
+                (user_id,),
+            )
+            pet_row = cur.fetchone()
+            if not pet_row:
+                cur.execute(
+                    "INSERT INTO pets (user_id, name, hunger, happiness) VALUES (%s, %s, 50, 60)",
+                    (user_id, f"{user['username']}的小兽"),
+                )
+        conn.commit()
+        if not pet_row:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT * FROM pets WHERE user_id = %s",
+                    (user_id,),
+                )
+                pet_row = cur.fetchone()
 
         if request.method == "POST":
             action_key = request.form.get("action")
@@ -1195,18 +1322,19 @@ def pet():
             new_hunger = clamp(pet_row["hunger"] + action["hunger_delta"])
             new_happiness = clamp(pet_row["happiness"] + action["happiness_delta"])
 
-            conn.execute(
-                "UPDATE users SET coins = coins - ? WHERE id = ?",
-                (action["cost"], user_id),
-            )
-            conn.execute(
-                """
-                UPDATE pets
-                SET hunger = ?, happiness = ?, last_care_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-                """,
-                (new_hunger, new_happiness, pet_row["id"]),
-            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE users SET coins = coins - %s WHERE id = %s",
+                    (action["cost"], user_id),
+                )
+                cur.execute(
+                    """
+                    UPDATE pets
+                    SET hunger = %s, happiness = %s, last_care_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                    """,
+                    (new_hunger, new_happiness, pet_row["id"]),
+                )
             conn.commit()
             flash(f"{action['label']}完成！宠物状态提升。", "success")
             return redirect(url_for("pet"))
@@ -1233,33 +1361,36 @@ def pet_buy_toy(slug: str):
 
     user_id = session["user_id"]
     with get_db_connection() as conn:
-        toy = conn.execute(
-            "SELECT id, name, price FROM toys WHERE slug = ?",
-            (slug,),
-        ).fetchone()
-        user = conn.execute(
-            "SELECT coins FROM users WHERE id = ?",
-            (user_id,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, name, price FROM toys WHERE slug = %s",
+                (slug,),
+            )
+            toy = cur.fetchone()
+            cur.execute(
+                "SELECT coins FROM users WHERE id = %s",
+                (user_id,),
+            )
+            user = cur.fetchone()
 
-        if not toy or not user:
-            abort(404)
+            if not toy or not user:
+                abort(404)
 
-        if user["coins"] < toy["price"]:
-            flash("金币不足，先去完成任务吧！", "error")
-            return redirect(url_for("pet"))
+            if user["coins"] < toy["price"]:
+                flash("金币不足，先去完成任务吧！", "error")
+                return redirect(url_for("pet"))
 
-        pos_x = random.uniform(5, 85)
-        pos_y = random.uniform(45, 80)
+            pos_x = random.uniform(5, 85)
+            pos_y = random.uniform(45, 80)
 
-        conn.execute(
-            "UPDATE users SET coins = coins - ? WHERE id = ?",
-            (toy["price"], user_id),
-        )
-        conn.execute(
-            "INSERT INTO user_toys (user_id, toy_id, pos_x, pos_y) VALUES (?, ?, ?, ?)",
-            (user_id, toy["id"], pos_x, pos_y),
-        )
+            cur.execute(
+                "UPDATE users SET coins = coins - %s WHERE id = %s",
+                (toy["price"], user_id),
+            )
+            cur.execute(
+                "INSERT INTO user_toys (user_id, toy_id, pos_x, pos_y) VALUES (%s, %s, %s, %s)",
+                (user_id, toy["id"], pos_x, pos_y),
+            )
         conn.commit()
 
     flash(f"已购买 {toy['name']}，它会出现在草坪上！", "success")
@@ -1278,22 +1409,24 @@ def reply_comment(comment_id: int):
         return redirect(request.referrer or url_for("discussions"))
 
     with get_db_connection() as conn:
-        comment = conn.execute(
-            """
-            SELECT comments.id, books.slug
-            FROM comments
-            JOIN books ON books.id = comments.book_id
-            WHERE comments.id = ?
-            """,
-            (comment_id,),
-        ).fetchone()
-        if not comment:
-            abort(404)
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT comments.id, books.slug
+                FROM comments
+                JOIN books ON books.id = comments.book_id
+                WHERE comments.id = %s
+                """,
+                (comment_id,),
+            )
+            comment = cur.fetchone()
+            if not comment:
+                abort(404)
 
-        conn.execute(
-            "INSERT INTO comment_replies (comment_id, user_id, content) VALUES (?, ?, ?)",
-            (comment_id, session["user_id"], content),
-        )
+            cur.execute(
+                "INSERT INTO comment_replies (comment_id, user_id, content) VALUES (%s, %s, %s)",
+                (comment_id, session["user_id"], content),
+            )
         conn.commit()
 
     flash("回复已发布。", "success")
@@ -1310,20 +1443,22 @@ def delete_comment_user(comment_id: int):
 
     user_id = session["user_id"]
     with get_db_connection() as conn:
-        comment = conn.execute(
-            """
-            SELECT comments.id, comments.user_id, books.slug
-            FROM comments
-            JOIN books ON books.id = comments.book_id
-            WHERE comments.id = ?
-            """,
-            (comment_id,),
-        ).fetchone()
-        if not comment:
-            abort(404)
-        if comment["user_id"] != user_id:
-            abort(403)
-        conn.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT comments.id, comments.user_id, books.slug
+                FROM comments
+                JOIN books ON books.id = comments.book_id
+                WHERE comments.id = %s
+                """,
+                (comment_id,),
+            )
+            comment = cur.fetchone()
+            if not comment:
+                abort(404)
+            if comment["user_id"] != user_id:
+                abort(403)
+            cur.execute("DELETE FROM comments WHERE id = %s", (comment_id,))
         conn.commit()
 
     flash("评论已删除。", "success")
@@ -1340,21 +1475,23 @@ def delete_reply_user(reply_id: int):
 
     user_id = session["user_id"]
     with get_db_connection() as conn:
-        reply = conn.execute(
-            """
-            SELECT comment_replies.id, comment_replies.user_id, books.slug
-            FROM comment_replies
-            JOIN comments ON comments.id = comment_replies.comment_id
-            JOIN books ON books.id = comments.book_id
-            WHERE comment_replies.id = ?
-            """,
-            (reply_id,),
-        ).fetchone()
-        if not reply:
-            abort(404)
-        if reply["user_id"] != user_id:
-            abort(403)
-        conn.execute("DELETE FROM comment_replies WHERE id = ?", (reply_id,))
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT comment_replies.id, comment_replies.user_id, books.slug
+                FROM comment_replies
+                JOIN comments ON comments.id = comment_replies.comment_id
+                JOIN books ON books.id = comments.book_id
+                WHERE comment_replies.id = %s
+                """,
+                (reply_id,),
+            )
+            reply = cur.fetchone()
+            if not reply:
+                abort(404)
+            if reply["user_id"] != user_id:
+                abort(403)
+            cur.execute("DELETE FROM comment_replies WHERE id = %s", (reply_id,))
         conn.commit()
 
     flash("回复已删除。", "success")
@@ -1371,38 +1508,44 @@ def settings_page():
 
     user_id = session["user_id"]
     with get_db_connection() as conn:
-        user = conn.execute(
-            """
-            SELECT id, username, coins, is_admin, avatar, language, last_username_change
-            FROM users WHERE id = ?
-            """,
-            (user_id,),
-        ).fetchone()
-        pet = conn.execute(
-            "SELECT name FROM pets WHERE user_id = ?",
-            (user_id,),
-        ).fetchone()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, username, coins, is_admin, avatar, language, last_username_change
+                FROM users WHERE id = %s
+                """,
+                (user_id,),
+            )
+            user = cur.fetchone()
+            cur.execute(
+                "SELECT name FROM pets WHERE user_id = %s",
+                (user_id,),
+            )
+            pet = cur.fetchone()
 
     if request.method == "POST":
         action = request.form.get("action")
         with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                if action == "pet_name":
+                    new_name = request.form.get("pet_name", "").strip()
+                    if not (1 <= len(new_name) <= 20):
+                        flash("名称长度需在 1-20 个字符内。", "error")
+                        return redirect(url_for("settings_page"))
+                    cur.execute(
+                        "INSERT INTO pets (user_id, name) VALUES (%s, %s) ON CONFLICT(user_id) DO UPDATE SET name=EXCLUDED.name",
+                        (user_id, new_name),
+                    )
+            conn.commit()
             if action == "pet_name":
-                new_name = request.form.get("pet_name", "").strip()
-                if not (1 <= len(new_name) <= 20):
-                    flash("名称长度需在 1-20 个字符内。", "error")
-                    return redirect(url_for("settings_page"))
-                conn.execute(
-                    "INSERT INTO pets (user_id, name) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET name=excluded.name",
-                    (user_id, new_name),
-                )
-                conn.commit()
                 flash("宠物昵称已更新！", "success")
             elif action == "avatar":
-                avatar_url = request.form.get("avatar", "").strip()
-                conn.execute(
-                    "UPDATE users SET avatar = ? WHERE id = ?",
-                    (avatar_url or None, user_id),
-                )
+                with conn.cursor() as cur:
+                    avatar_url = request.form.get("avatar", "").strip()
+                    cur.execute(
+                        "UPDATE users SET avatar = %s WHERE id = %s",
+                        (avatar_url or None, user_id),
+                    )
                 conn.commit()
                 flash("头像链接已更新。", "success")
             elif action == "username":
@@ -1424,17 +1567,19 @@ def settings_page():
                 if last_change and datetime.now() - last_change < timedelta(days=7):
                     flash("用户名每 7 天只能修改一次。", "error")
                     return redirect(url_for("settings_page"))
-                exists = conn.execute(
-                    "SELECT 1 FROM users WHERE username = ?",
-                    (new_username,),
-                ).fetchone()
-                if exists:
-                    flash("该用户名已被占用。", "error")
-                    return redirect(url_for("settings_page"))
-                conn.execute(
-                    "UPDATE users SET username = ?, last_username_change = CURRENT_TIMESTAMP WHERE id = ?",
-                    (new_username, user_id),
-                )
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT 1 FROM users WHERE username = %s",
+                        (new_username,),
+                    )
+                    exists = cur.fetchone()
+                    if exists:
+                        flash("该用户名已被占用。", "error")
+                        return redirect(url_for("settings_page"))
+                    cur.execute(
+                        "UPDATE users SET username = %s, last_username_change = CURRENT_TIMESTAMP WHERE id = %s",
+                        (new_username, user_id),
+                    )
                 conn.commit()
                 session["username"] = new_username
                 flash("用户名已修改！", "success")
@@ -1468,20 +1613,23 @@ def register():
 
         try:
             with get_db_connection() as conn:
-                existing_count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-                cursor = conn.execute(
-                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
-                    (username, password_hash),
-                )
-                if existing_count == 0:
-                    conn.execute(
-                        "UPDATE users SET is_admin = 1 WHERE id = ?",
-                        (cursor.lastrowid,),
+                with conn.cursor() as cur:
+                    cur.execute("SELECT COUNT(*) FROM users")
+                    existing_count = cur.fetchone()[0]
+                    cur.execute(
+                        "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
+                        (username, password_hash),
                     )
+                    new_user_id = cur.fetchone()[0]
+                    if existing_count == 0:
+                        cur.execute(
+                            "UPDATE users SET is_admin = 1 WHERE id = %s",
+                            (new_user_id,),
+                        )
                 conn.commit()
             flash("注册成功，请登录。", "success")
             return redirect(url_for("login"))
-        except sqlite3.IntegrityError:
+        except psycopg2.IntegrityError:
             flash("用户名已存在，请换一个。", "error")
 
     return render_template("register.html")
@@ -1494,13 +1642,15 @@ def login():
         password = request.form.get("password", "")
 
         with get_db_connection() as conn:
-            user = conn.execute(
-                """
-                SELECT id, username, password_hash, coins, is_admin
-                FROM users WHERE username = ?
-                """,
-                (username,),
-            ).fetchone()
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, username, password_hash, coins, is_admin
+                    FROM users WHERE username = %s
+                    """,
+                    (username,),
+                )
+                user = cur.fetchone()
 
         if user and check_password_hash(user["password_hash"], password):
             session["user_id"] = user["id"]
