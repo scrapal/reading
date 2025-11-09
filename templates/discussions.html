@@ -25,6 +25,24 @@
               <span>{{ comment.created_at|friendly_date }}</span>
               <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>
             </div>
+            {% set replies = replies_map.get(comment.id, []) %}
+            {% if replies %}
+              <ul class="reply-list">
+                {% for reply in replies %}
+                  <li>
+                    <strong>{{ reply.username }}</strong>：{{ reply.content }}
+                    <span>{{ reply.created_at|friendly_date }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if session.get('user_id') %}
+              <form class="reply-form" method="post" action="{{ url_for('reply_comment', comment_id=comment.id) }}">
+                <textarea name="content" rows="2" placeholder="回复 {{ comment.username }}" required></textarea>
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button class="mini-btn" type="submit">回复</button>
+              </form>
+            {% endif %}
           </div>
         </li>
       {% else %}
@@ -47,6 +65,24 @@
               <span>{{ comment.created_at|friendly_date }}</span>
               <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>
             </div>
+            {% set replies = replies_map.get(comment.id, []) %}
+            {% if replies %}
+              <ul class="reply-list">
+                {% for reply in replies %}
+                  <li>
+                    <strong>{{ reply.username }}</strong>：{{ reply.content }}
+                    <span>{{ reply.created_at|friendly_date }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if session.get('user_id') %}
+              <form class="reply-form" method="post" action="{{ url_for('reply_comment', comment_id=comment.id) }}">
+                <textarea name="content" rows="2" placeholder="回复 {{ comment.username }}" required></textarea>
+                <input type="hidden" name="next" value="{{ request.path }}">
+                <button class="mini-btn" type="submit">回复</button>
+              </form>
+            {% endif %}
           </div>
         </li>
       {% else %}

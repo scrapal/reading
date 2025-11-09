@@ -485,6 +485,16 @@ def init_db() -> None:
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY (toy_id) REFERENCES toys(id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS comment_replies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                comment_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
             """
         )
         ensure_column(conn, "users", "coins", "INTEGER DEFAULT 0")
@@ -667,6 +677,34 @@ def get_all_user_toys(limit: int = 50):
         ).fetchall()
 
 
+def get_comment_replies(comment_ids: list[int]):
+    if not comment_ids:
+        return {}
+    placeholders = ",".join(["?"] * len(comment_ids))
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT comment_replies.id, comment_replies.comment_id, comment_replies.content,
+                   comment_replies.created_at, users.username
+            FROM comment_replies
+            JOIN users ON users.id = comment_replies.user_id
+            WHERE comment_replies.comment_id IN ({placeholders})
+            ORDER BY comment_replies.created_at ASC
+            """,
+            tuple(comment_ids),
+        ).fetchall()
+    grouped: dict[int, list[sqlite3.Row]] = {cid: [] for cid in comment_ids}
+    for row in rows:
+        grouped.setdefault(row["comment_id"], []).append(row)
+    return grouped
+
+
+def redirect_to(next_url: str | None, fallback: str):
+    if next_url and next_url.startswith("/"):
+        return redirect(next_url)
+    return redirect(fallback)
+
+
 @app.template_filter("friendly_date")
 def friendly_date(value: str | None) -> str:
     if not value:
@@ -805,7 +843,7 @@ def book_detail(slug: str):
 
         comments = conn.execute(
             """
-            SELECT comments.content, comments.created_at, comments.category, users.username
+            SELECT comments.id, comments.content, comments.created_at, comments.category, users.username
             FROM comments
             JOIN users ON users.id = comments.user_id
             WHERE comments.book_id = ?
@@ -815,11 +853,13 @@ def book_detail(slug: str):
         ).fetchall()
 
     grouped = group_comments(comments)
+    replies_map = get_comment_replies([row["id"] for row in comments])
     return render_template(
         "book_detail.html",
         book=book,
         discussion_comments=grouped["discussion"],
         reflection_comments=grouped["reflection"],
+        replies_map=replies_map,
     )
 
 
@@ -828,7 +868,7 @@ def discussions():
     with get_db_connection() as conn:
         thread = conn.execute(
             """
-            SELECT comments.content, comments.created_at, comments.category,
+            SELECT comments.id, comments.content, comments.created_at, comments.category,
                    users.username, books.title, books.slug
             FROM comments
             JOIN users ON users.id = comments.user_id
@@ -837,10 +877,12 @@ def discussions():
             """
         ).fetchall()
     grouped = group_comments(thread)
+    replies_map = get_comment_replies([row["id"] for row in thread])
     return render_template(
         "discussions.html",
         discussion_comments=grouped["discussion"],
         reflection_comments=grouped["reflection"],
+        replies_map=replies_map,
     )
 
 
@@ -1202,6 +1244,42 @@ def pet_buy_toy(slug: str):
 
     flash(f"已购买 {toy['name']}，它会出现在草坪上！", "success")
     return redirect(url_for("pet"))
+
+
+@app.post("/comments/<int:comment_id>/reply")
+def reply_comment(comment_id: int):
+    if not is_logged_in():
+        flash("请先登录再回复。", "error")
+        return redirect(url_for("login"))
+
+    content = request.form.get("content", "").strip()
+    if not content:
+        flash("回复内容不能为空。", "error")
+        return redirect(request.referrer or url_for("discussions"))
+
+    with get_db_connection() as conn:
+        comment = conn.execute(
+            """
+            SELECT comments.id, books.slug
+            FROM comments
+            JOIN books ON books.id = comments.book_id
+            WHERE comments.id = ?
+            """,
+            (comment_id,),
+        ).fetchone()
+        if not comment:
+            abort(404)
+
+        conn.execute(
+            "INSERT INTO comment_replies (comment_id, user_id, content) VALUES (?, ?, ?)",
+            (comment_id, session["user_id"], content),
+        )
+        conn.commit()
+
+    flash("回复已发布。", "success")
+    next_url = request.form.get("next")
+    fallback = url_for("book_detail", slug=comment["slug"])
+    return redirect_to(next_url, fallback)
 
 
 @app.route("/settings", methods=["GET", "POST"])
