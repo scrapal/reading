@@ -27,10 +27,7 @@
       <form class="settings-form" method="post" action="{{ url_for('settings_page') }}" enctype="multipart/form-data">
         <input type="hidden" name="action" value="avatar">
         <label>上传头像图片
-          <input type="file" name="avatar_file" accept="image/*">
-        </label>
-        <label>或输入头像地址
-          <input name="avatar" value="{{ user.avatar or '' }}" placeholder="https://example.com/avatar.png">
+          <input type="file" name="avatar_file" accept="image/*" required>
         </label>
         <button class="btn" type="submit">更新头像</button>
       </form>

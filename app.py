@@ -1075,23 +1075,19 @@ def admin_add_book():
     grade = request.form.get("grade", "").strip()
     slug_value = request.form.get("slug", "").strip() or slugify(title)
 
-    # Handle file upload or URL
-    cover_file = request.files.get("cover_file")
-    cover_url = request.form.get("cover_url", "").strip()
-
-    if cover_file and cover_file.filename:
-        uploaded_url = save_uploaded_file(cover_file, "covers")
-        if uploaded_url:
-            cover_url = uploaded_url
-        else:
-            flash("封面文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
-            return redirect(url_for("admin_dashboard"))
-
-    if not cover_url:
-        cover_url = "https://placehold.co/320x180?text=Book"
-
     if not title:
         flash("书名不能为空。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    # Handle file upload
+    cover_file = request.files.get("cover_file")
+    if not cover_file or not cover_file.filename:
+        flash("请上传封面图片。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    cover_url = save_uploaded_file(cover_file, "covers")
+    if not cover_url:
+        flash("封面文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
         return redirect(url_for("admin_dashboard"))
 
     if grade and grade not in GRADE_ORDER:
@@ -1593,22 +1589,22 @@ def settings_page():
             if action == "pet_name":
                 flash("宠物昵称已更新！", "success")
             elif action == "avatar":
-                # Handle file upload or URL
+                # Handle file upload
                 avatar_file = request.files.get("avatar_file")
-                avatar_url = request.form.get("avatar", "").strip()
 
-                if avatar_file and avatar_file.filename:
-                    uploaded_url = save_uploaded_file(avatar_file, "avatars")
-                    if uploaded_url:
-                        avatar_url = uploaded_url
-                    else:
-                        flash("头像文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
-                        return redirect(url_for("settings_page"))
+                if not avatar_file or not avatar_file.filename:
+                    flash("请选择头像图片文件。", "error")
+                    return redirect(url_for("settings_page"))
+
+                avatar_url = save_uploaded_file(avatar_file, "avatars")
+                if not avatar_url:
+                    flash("头像文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
+                    return redirect(url_for("settings_page"))
 
                 with conn.cursor() as cur:
                     cur.execute(
                         "UPDATE users SET avatar = %s WHERE id = %s",
-                        (avatar_url or None, user_id),
+                        (avatar_url, user_id),
                     )
                 conn.commit()
                 flash("头像已更新。", "success")
