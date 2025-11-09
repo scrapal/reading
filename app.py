@@ -600,6 +600,26 @@ def init_db() -> None:
                 """
             )
 
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS book_requests (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    author TEXT,
+                    publisher TEXT,
+                    grade TEXT,
+                    cover_url TEXT,
+                    status TEXT DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    reviewed_at TIMESTAMP,
+                    reviewed_by INTEGER,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+                )
+                """
+            )
+
         ensure_column(conn, "users", "coins", "INTEGER DEFAULT 0")
         ensure_column(conn, "users", "avatar", "TEXT")
         ensure_column(conn, "users", "is_admin", "INTEGER DEFAULT 0")
@@ -1048,6 +1068,18 @@ def admin_dashboard():
                 "SELECT id, title, slug, grade FROM books ORDER BY created_at DESC LIMIT 12"
             )
             recent_books = cur.fetchall()
+            cur.execute(
+                """
+                SELECT book_requests.id, book_requests.title, book_requests.author,
+                       book_requests.publisher, book_requests.grade, book_requests.cover_url,
+                       book_requests.created_at, users.username
+                FROM book_requests
+                JOIN users ON users.id = book_requests.user_id
+                WHERE book_requests.status = 'pending'
+                ORDER BY book_requests.created_at DESC
+                """
+            )
+            pending_requests = cur.fetchall()
         user_toys = get_all_user_toys()
 
         grouped_comments = group_comments(comments)
@@ -1063,6 +1095,7 @@ def admin_dashboard():
             recent_books=recent_books,
             admin_user_toys=user_toys,
             admin_replies=admin_replies,
+            pending_requests=pending_requests,
         )
 
 
@@ -1285,6 +1318,84 @@ def admin_delete_reply(reply_id: int):
         flash("回复已删除。", "success")
     else:
         flash("未找到该回复。", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/book-requests/<int:request_id>/approve")
+def admin_approve_request(request_id: int):
+    admin = require_admin()
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # Get request details
+            cur.execute(
+                """
+                SELECT title, author, publisher, grade, cover_url
+                FROM book_requests
+                WHERE id = %s AND status = 'pending'
+                """,
+                (request_id,),
+            )
+            req = cur.fetchone()
+
+            if not req:
+                flash("未找到该申请或已处理。", "error")
+                return redirect(url_for("admin_dashboard"))
+
+            # Generate slug
+            slug_value = slugify(req["title"])
+
+            # Add book to books table
+            cur.execute(
+                """
+                INSERT INTO books (slug, title, author, publisher, grade, cover_url)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT(slug) DO UPDATE SET
+                    title=EXCLUDED.title,
+                    author=EXCLUDED.author,
+                    publisher=EXCLUDED.publisher,
+                    grade=EXCLUDED.grade,
+                    cover_url=EXCLUDED.cover_url
+                """,
+                (slug_value, req["title"], req["author"], req["publisher"], req["grade"], req["cover_url"]),
+            )
+
+            # Update request status
+            cur.execute(
+                """
+                UPDATE book_requests
+                SET status = 'approved', reviewed_at = CURRENT_TIMESTAMP, reviewed_by = %s
+                WHERE id = %s
+                """,
+                (admin["id"], request_id),
+            )
+        conn.commit()
+
+    flash(f"书籍《{req['title']}》已通过审核并添加到书架。", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/book-requests/<int:request_id>/reject")
+def admin_reject_request(request_id: int):
+    admin = require_admin()
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE book_requests
+                SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP, reviewed_by = %s
+                WHERE id = %s AND status = 'pending'
+                """,
+                (admin["id"], request_id),
+            )
+            updated_count = cur.rowcount
+        conn.commit()
+
+    if updated_count:
+        flash("已拒绝该书籍申请。", "success")
+    else:
+        flash("未找到该申请或已处理。", "error")
     return redirect(url_for("admin_dashboard"))
 
 
@@ -1653,6 +1764,75 @@ def settings_page():
         user=user,
         pet_name=pet_name,
     )
+
+
+@app.route("/request-book")
+def request_book():
+    if not is_logged_in():
+        flash("请先登录。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, title, author, publisher, grade, status, created_at
+                FROM book_requests
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+                """,
+                (user_id,),
+            )
+            my_requests = cur.fetchall()
+
+    return render_template("request_book.html", my_requests=my_requests)
+
+
+@app.post("/request-book/submit")
+def submit_book_request():
+    if not is_logged_in():
+        flash("请先登录。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    title = request.form.get("title", "").strip()
+    author = request.form.get("author", "").strip()
+    publisher = request.form.get("publisher", "").strip()
+    grade = request.form.get("grade", "").strip()
+
+    if not title:
+        flash("书名不能为空。", "error")
+        return redirect(url_for("request_book"))
+
+    if not grade or grade not in GRADE_ORDER:
+        flash("请选择有效的年级。", "error")
+        return redirect(url_for("request_book"))
+
+    # Handle file upload
+    cover_file = request.files.get("cover_file")
+    if not cover_file or not cover_file.filename:
+        flash("请上传封面图片。", "error")
+        return redirect(url_for("request_book"))
+
+    cover_url = save_uploaded_file(cover_file, "covers")
+    if not cover_url:
+        flash("封面文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
+        return redirect(url_for("request_book"))
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO book_requests (user_id, title, author, publisher, grade, cover_url)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (user_id, title, author, publisher, grade, cover_url),
+            )
+        conn.commit()
+
+    flash("书籍申请已提交，等待管理员审核。", "success")
+    return redirect(url_for("request_book"))
 
 
 @app.route("/register", methods=["GET", "POST"])

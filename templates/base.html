@@ -13,6 +13,9 @@
         <nav>
           <ul class="nav-links">
             <li><a href="{{ url_for('books') }}">书架</a></li>
+            {% if session.get('user_id') %}
+              <li><a href="{{ url_for('request_book') }}">申请书籍</a></li>
+            {% endif %}
             <li><a href="{{ url_for('tasks') }}">任务</a></li>
             <li><a href="{{ url_for('discussions') }}">讨论</a></li>
             <li><a href="{{ url_for('pet') }}">宠物</a></li>

@@ -63,6 +63,45 @@
 
   <section class="card">
     <div class="section-header">
+      <h3>待审核书籍申请</h3>
+      <p>用户申请添加的书籍，审核通过后将显示在书架上。</p>
+    </div>
+    {% if pending_requests %}
+      <ul class="discussion-list">
+        {% for req in pending_requests %}
+          <li class="discussion-item admin-item">
+            <div class="avatar">{{ req.username[0]|upper }}</div>
+            <div class="admin-comment">
+              <p class="comment-text">
+                <strong>{{ req.title }}</strong><br>
+                作者：{{ req.author or '未填写' }} · 出版社：{{ req.publisher or '未填写' }} · 年级：{{ req.grade or '未填写' }}
+              </p>
+              <div class="comment-meta">
+                <span>申请人：{{ req.username }}</span>
+                <span>{{ req.created_at|friendly_date }}</span>
+                {% if req.cover_url %}
+                  <a href="{{ req.cover_url }}" target="_blank">查看封面</a>
+                {% endif %}
+              </div>
+            </div>
+            <div class="admin-actions">
+              <form class="inline-form" method="post" action="{{ url_for('admin_approve_request', request_id=req.id) }}">
+                <button class="btn" type="submit">通过</button>
+              </form>
+              <form class="inline-form" method="post" action="{{ url_for('admin_reject_request', request_id=req.id) }}">
+                <button class="danger-btn" type="submit">拒绝</button>
+              </form>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p style="padding: 1rem;">暂无待审核的申请。</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <div class="section-header">
       <h3>讨论评论（最新 50 条）</h3>
     </div>
     <ul class="discussion-list">
