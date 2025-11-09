@@ -910,6 +910,8 @@ def admin_dashboard():
         user_toys = get_all_user_toys()
 
     grouped_comments = group_comments(comments)
+    all_comment_ids = [row["id"] for row in comments]
+    admin_replies = get_comment_replies(all_comment_ids)
     return render_template(
         "admin.html",
         admin=admin_user,
@@ -919,6 +921,7 @@ def admin_dashboard():
         admin_users=users,
         recent_books=recent_books,
         admin_user_toys=user_toys,
+        admin_replies=admin_replies,
     )
 
 
@@ -1097,6 +1100,23 @@ def admin_delete_user_toy(user_toy_id: int):
         flash("玩具已移除。", "success")
     else:
         flash("未找到该玩具记录。", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/replies/<int:reply_id>/delete")
+def admin_delete_reply(reply_id: int):
+    require_admin()
+    with get_db_connection() as conn:
+        deleted = conn.execute(
+            "DELETE FROM comment_replies WHERE id = ?",
+            (reply_id,),
+        )
+        conn.commit()
+
+    if deleted.rowcount:
+        flash("回复已删除。", "success")
+    else:
+        flash("未找到该回复。", "error")
     return redirect(url_for("admin_dashboard"))
 
 
