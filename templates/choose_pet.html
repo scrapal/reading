@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}选择你的宠物 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h2>欢迎来到阅读空间！</h2>
+        <p>选择一只陪伴你阅读旅程的小伙伴吧~</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <form method="post" action="{{ url_for('choose_pet') }}">
+      <div class="pet-selection-grid">
+        {% for pet in appearances %}
+          <label class="pet-option">
+            <input type="radio" name="appearance" value="{{ pet.id }}" {% if loop.first %}checked{% endif %} required>
+            <div class="pet-card" style="border-color: {{ pet.color }}">
+              <div class="pet-emoji" style="background: {{ pet.color }}">{{ pet.emoji }}</div>
+              <div class="pet-name">{{ pet.name }}</div>
+            </div>
+          </label>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top: 2rem;">
+        <label>给你的小伙伴起个名字吧
+          <input name="pet_name" maxlength="20" placeholder="例如：小书虫" required>
+        </label>
+      </div>
+
+      <button class="btn" type="submit" style="margin-top: 1.5rem;">开始阅读之旅</button>
+    </form>
+  </section>
+
+  <style>
+    .pet-selection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .pet-option {
+      cursor: pointer;
+      margin: 0;
+    }
+
+    .pet-option input[type="radio"] {
+      display: none;
+    }
+
+    .pet-card {
+      border: 3px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      background: white;
+    }
+
+    .pet-option input[type="radio"]:checked + .pet-card {
+      border-width: 4px;
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .pet-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    .pet-emoji {
+      font-size: 3.5rem;
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: #f0f0f0;
+    }
+
+    .pet-name {
+      font-weight: 600;
+      color: #333;
+      font-size: 0.95rem;
+    }
+  </style>
+{% endblock %}

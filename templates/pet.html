@@ -26,13 +26,8 @@
     <div class="pet-playground">
       <div class="pet-field">
         <div class="pet-path"></div>
-        <div class="pet-character">
-          <div class="pet-face">
-            <span class="eye left"></span>
-            <span class="eye right"></span>
-            <span class="mouth"></span>
-          </div>
-          <div class="pet-body"></div>
+        <div class="pet-character" style="background: {{ pet_appearance.color }}; border-color: {{ pet_appearance.color }};">
+          <div class="pet-emoji-display">{{ pet_appearance.emoji }}</div>
         </div>
         <div class="pet-sparkle sparkle-1"></div>
         <div class="pet-sparkle sparkle-2"></div>

@@ -345,6 +345,19 @@ TASK_SEED = [
     },
 ]
 
+PET_APPEARANCES = [
+    {"id": "cat-orange", "name": "橙色小猫", "emoji": "🐱", "color": "#FF8C42"},
+    {"id": "cat-blue", "name": "蓝色小猫", "emoji": "🐱", "color": "#4A90E2"},
+    {"id": "dog-brown", "name": "棕色小狗", "emoji": "🐶", "color": "#A0826D"},
+    {"id": "dog-pink", "name": "粉色小狗", "emoji": "🐶", "color": "#FFB6C1"},
+    {"id": "rabbit-white", "name": "白色兔子", "emoji": "🐰", "color": "#F5F5F5"},
+    {"id": "rabbit-purple", "name": "紫色兔子", "emoji": "🐰", "color": "#9B59B6"},
+    {"id": "bear-brown", "name": "棕色小熊", "emoji": "🐻", "color": "#8B4513"},
+    {"id": "bear-green", "name": "绿色小熊", "emoji": "🐻", "color": "#52C41A"},
+    {"id": "penguin-black", "name": "企鹅宝宝", "emoji": "🐧", "color": "#2C3E50"},
+    {"id": "bird-yellow", "name": "黄色小鸟", "emoji": "🐦", "color": "#FFD700"},
+]
+
 PET_ACTIONS = {
     "feed": {
         "label": "喂食",
@@ -629,6 +642,7 @@ def init_db() -> None:
         ensure_column(conn, "books", "publisher", "TEXT")
         ensure_column(conn, "books", "grade", "TEXT")
         ensure_column(conn, "comments", "category", "TEXT DEFAULT 'discussion'")
+        ensure_column(conn, "pets", "appearance", "TEXT DEFAULT 'cat-orange'")
         seed_books(conn)
         seed_tasks(conn)
         seed_toys(conn)
@@ -1502,6 +1516,10 @@ def pet():
         satiety = clamp(100 - pet_row["hunger"])
         owned_toys = get_user_toys(user_id)
         toy_catalog = get_available_toys(user_id)
+
+        # Get pet appearance info
+        pet_appearance = next((p for p in PET_APPEARANCES if p["id"] == pet_row.get("appearance", "cat-orange")), PET_APPEARANCES[0])
+
         return render_template(
             "pet.html",
             pet=pet_row,
@@ -1510,6 +1528,7 @@ def pet():
             actions=PET_ACTIONS,
             owned_toys=owned_toys,
             toy_catalog=toy_catalog,
+            pet_appearance=pet_appearance,
         )
 
 
@@ -1835,6 +1854,50 @@ def submit_book_request():
     return redirect(url_for("request_book"))
 
 
+@app.route("/choose-pet", methods=["GET", "POST"])
+def choose_pet():
+    if not is_logged_in():
+        flash("请先登录。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    # Check if user already has a pet
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM pets WHERE user_id = %s", (user_id,))
+            existing_pet = cur.fetchone()
+
+    if existing_pet:
+        # User already has a pet, redirect to pet page
+        return redirect(url_for("pet"))
+
+    if request.method == "POST":
+        appearance = request.form.get("appearance", "").strip()
+        pet_name = request.form.get("pet_name", "").strip()
+
+        if not appearance or appearance not in [p["id"] for p in PET_APPEARANCES]:
+            flash("请选择有效的宠物造型。", "error")
+            return redirect(url_for("choose_pet"))
+
+        if not pet_name or not (1 <= len(pet_name) <= 20):
+            flash("宠物名字需在 1-20 个字符之间。", "error")
+            return redirect(url_for("choose_pet"))
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO pets (user_id, name, appearance, hunger, happiness) VALUES (%s, %s, %s, 50, 60)",
+                    (user_id, pet_name, appearance),
+                )
+            conn.commit()
+
+        flash("宠物创建成功！开始你的阅读之旅吧~", "success")
+        return redirect(url_for("index"))
+
+    return render_template("choose_pet.html", appearances=PET_APPEARANCES)
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -1867,8 +1930,14 @@ def register():
                             (new_user_id,),
                         )
                 conn.commit()
-            flash("注册成功，请登录。", "success")
-            return redirect(url_for("login"))
+
+            # Auto-login after registration
+            session["user_id"] = new_user_id
+            session["username"] = username
+            session["is_admin"] = (existing_count == 0)
+
+            flash("注册成功！请选择你的宠物伙伴~", "success")
+            return redirect(url_for("choose_pet"))
         except psycopg2.IntegrityError:
             flash("用户名已存在，请换一个。", "error")
 
