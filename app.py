@@ -1339,18 +1339,18 @@ def pet():
             flash(f"{action['label']}完成！宠物状态提升。", "success")
             return redirect(url_for("pet"))
 
-    satiety = clamp(100 - pet_row["hunger"])
-    owned_toys = get_user_toys(user_id)
-    toy_catalog = get_available_toys(user_id)
-    return render_template(
-        "pet.html",
-        pet=pet_row,
-        satiety=satiety,
-        coins=user["coins"],
-        actions=PET_ACTIONS,
-        owned_toys=owned_toys,
-        toy_catalog=toy_catalog,
-    )
+        satiety = clamp(100 - pet_row["hunger"])
+        owned_toys = get_user_toys(user_id)
+        toy_catalog = get_available_toys(user_id)
+        return render_template(
+            "pet.html",
+            pet=pet_row,
+            satiety=satiety,
+            coins=user["coins"],
+            actions=PET_ACTIONS,
+            owned_toys=owned_toys,
+            toy_catalog=toy_catalog,
+        )
 
 
 @app.post("/pet/buy/<slug>")
