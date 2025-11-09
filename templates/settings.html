@@ -28,7 +28,8 @@
         <input type="hidden" name="action" value="avatar">
         <label>上传头像图片
           <input type="file" name="avatar_file" accept="image/*">
-          <small>或输入头像地址：</small>
+        </label>
+        <label>或输入头像地址
           <input name="avatar" value="{{ user.avatar or '' }}" placeholder="https://example.com/avatar.png">
         </label>
         <button class="btn" type="submit">更新头像</button>
