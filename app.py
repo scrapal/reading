@@ -1125,7 +1125,13 @@ def admin_dashboard():
             )
             comments = cur.fetchall()
             cur.execute(
-                "SELECT id, username, is_admin, created_at, coins FROM users ORDER BY created_at DESC"
+                """
+                SELECT users.id, users.username, users.is_admin, users.created_at, users.coins,
+                       pets.appearance
+                FROM users
+                LEFT JOIN pets ON pets.user_id = users.id
+                ORDER BY users.created_at DESC
+                """
             )
             users = cur.fetchall()
             cur.execute(
@@ -1160,6 +1166,7 @@ def admin_dashboard():
             admin_user_toys=user_toys,
             admin_replies=admin_replies,
             pending_requests=pending_requests,
+            pet_appearances=PET_APPEARANCES,
         )
 
 
@@ -1382,6 +1389,56 @@ def admin_delete_reply(reply_id: int):
         flash("回复已删除。", "success")
     else:
         flash("未找到该回复。", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/users/<int:user_id>/pet-appearance")
+def admin_set_pet_appearance(user_id: int):
+    require_admin()
+    appearance = request.form.get("appearance", "").strip()
+
+    if not appearance or appearance not in [p["id"] for p in PET_APPEARANCES]:
+        flash("请选择有效的宠物样式。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # Check if user has a pet
+            cur.execute(
+                "SELECT id FROM pets WHERE user_id = %s",
+                (user_id,),
+            )
+            pet = cur.fetchone()
+
+            if pet:
+                # Update existing pet appearance
+                cur.execute(
+                    "UPDATE pets SET appearance = %s WHERE user_id = %s",
+                    (appearance, user_id),
+                )
+                updated_count = cur.rowcount
+            else:
+                # Create pet with selected appearance
+                cur.execute(
+                    "SELECT username FROM users WHERE id = %s",
+                    (user_id,),
+                )
+                user = cur.fetchone()
+                if user:
+                    cur.execute(
+                        "INSERT INTO pets (user_id, name, appearance, hunger, happiness) VALUES (%s, %s, %s, 50, 60)",
+                        (user_id, f"{user['username']}的小兽", appearance),
+                    )
+                    updated_count = cur.rowcount
+                else:
+                    updated_count = 0
+
+        conn.commit()
+
+    if updated_count:
+        flash("宠物样式已更新。", "success")
+    else:
+        flash("更新失败，请重试。", "error")
     return redirect(url_for("admin_dashboard"))
 
 

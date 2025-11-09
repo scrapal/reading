@@ -192,6 +192,7 @@
           <tr>
             <th>用户名</th>
             <th>金币</th>
+            <th>宠物样式</th>
             <th>角色</th>
             <th>加入时间</th>
             <th>操作</th>
@@ -205,6 +206,20 @@
                 <form class="inline-form coin-form" method="post" action="{{ url_for('admin_set_coins', user_id=user.id) }}">
                   <input type="number" name="coins" min="0" value="{{ user.coins }}">
                   <button class="ghost-btn" type="submit">保存</button>
+                </form>
+              </td>
+              <td>
+                <form class="inline-form pet-form" method="post" action="{{ url_for('admin_set_pet_appearance', user_id=user.id) }}">
+                  <div class="pet-selector">
+                    <select name="appearance" required>
+                      {% for pet in pet_appearances %}
+                        <option value="{{ pet.id }}" {% if user.appearance == pet.id %}selected{% endif %}>
+                          {{ pet.name }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                    <button class="ghost-btn" type="submit">更新</button>
+                  </div>
                 </form>
               </td>
               <td>{% if user.is_admin %}管理员{% else %}普通用户{% endif %}</td>
