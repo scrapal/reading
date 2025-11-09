@@ -904,6 +904,9 @@ def index():
 
 @app.route("/books")
 def books():
+    user_id = session.get("user_id")
+    my_requests = []
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -919,6 +922,18 @@ def books():
             )
             rows = cur.fetchall()
 
+            if user_id:
+                cur.execute(
+                    """
+                    SELECT id, title, author, publisher, grade, status, created_at
+                    FROM book_requests
+                    WHERE user_id = %s
+                    ORDER BY created_at DESC
+                    """,
+                    (user_id,),
+                )
+                my_requests = cur.fetchall()
+
     grouped: dict[str, list] = {}
     for row in rows:
         grade = row["grade"] or "未分级"
@@ -931,6 +946,7 @@ def books():
         "books.html",
         grouped_books=grouped,
         grade_order=ordered_grades,
+        my_requests=my_requests,
     )
 
 
@@ -1766,29 +1782,6 @@ def settings_page():
     )
 
 
-@app.route("/request-book")
-def request_book():
-    if not is_logged_in():
-        flash("请先登录。", "error")
-        return redirect(url_for("login"))
-
-    user_id = session["user_id"]
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, title, author, publisher, grade, status, created_at
-                FROM book_requests
-                WHERE user_id = %s
-                ORDER BY created_at DESC
-                """,
-                (user_id,),
-            )
-            my_requests = cur.fetchall()
-
-    return render_template("request_book.html", my_requests=my_requests)
-
-
 @app.post("/request-book/submit")
 def submit_book_request():
     if not is_logged_in():
@@ -1803,22 +1796,22 @@ def submit_book_request():
 
     if not title:
         flash("书名不能为空。", "error")
-        return redirect(url_for("request_book"))
+        return redirect(url_for("books"))
 
     if not grade or grade not in GRADE_ORDER:
         flash("请选择有效的年级。", "error")
-        return redirect(url_for("request_book"))
+        return redirect(url_for("books"))
 
     # Handle file upload
     cover_file = request.files.get("cover_file")
     if not cover_file or not cover_file.filename:
         flash("请上传封面图片。", "error")
-        return redirect(url_for("request_book"))
+        return redirect(url_for("books"))
 
     cover_url = save_uploaded_file(cover_file, "covers")
     if not cover_url:
         flash("封面文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
-        return redirect(url_for("request_book"))
+        return redirect(url_for("books"))
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -1832,7 +1825,7 @@ def submit_book_request():
         conn.commit()
 
     flash("书籍申请已提交，等待管理员审核。", "success")
-    return redirect(url_for("request_book"))
+    return redirect(url_for("books"))
 
 
 @app.route("/register", methods=["GET", "POST"])
