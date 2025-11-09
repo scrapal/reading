@@ -1119,9 +1119,9 @@ def admin_toggle_user(user_id: int):
 
             if user["is_admin"]:
                 cur.execute(
-                    "SELECT COUNT(*) FROM users WHERE is_admin = 1"
+                    "SELECT COUNT(*) as count FROM users WHERE is_admin = 1"
                 )
-                admin_count = cur.fetchone()[0]
+                admin_count = cur.fetchone()['count']
                 if admin_count <= 1:
                     flash("至少需要保留一名管理员。", "error")
                     return redirect(url_for("admin_dashboard"))
@@ -1187,9 +1187,9 @@ def admin_delete_user(user_id: int):
 
             if user["is_admin"]:
                 cur.execute(
-                    "SELECT COUNT(*) FROM users WHERE is_admin = 1"
+                    "SELECT COUNT(*) as count FROM users WHERE is_admin = 1"
                 )
-                admin_count = cur.fetchone()[0]
+                admin_count = cur.fetchone()['count']
                 if admin_count <= 1:
                     flash("至少需要保留一名管理员。", "error")
                     return redirect(url_for("admin_dashboard"))
@@ -1614,13 +1614,13 @@ def register():
         try:
             with get_db_connection() as conn:
                 with conn.cursor() as cur:
-                    cur.execute("SELECT COUNT(*) FROM users")
-                    existing_count = cur.fetchone()[0]
+                    cur.execute("SELECT COUNT(*) as count FROM users")
+                    existing_count = cur.fetchone()['count']
                     cur.execute(
                         "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
                         (username, password_hash),
                     )
-                    new_user_id = cur.fetchone()[0]
+                    new_user_id = cur.fetchone()['id']
                     if existing_count == 0:
                         cur.execute(
                             "UPDATE users SET is_admin = 1 WHERE id = %s",
