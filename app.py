@@ -792,13 +792,17 @@ def redirect_to(next_url: str | None, fallback: str):
 
 
 @app.template_filter("friendly_date")
-def friendly_date(value: str | None) -> str:
+def friendly_date(value) -> str:
     if not value:
         return ""
     try:
-        return datetime.fromisoformat(value).strftime("%Y-%m-%d")
-    except ValueError:
-        return value
+        # PostgreSQL returns datetime objects, SQLite returns strings
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d")
+        else:
+            return datetime.fromisoformat(str(value)).strftime("%Y-%m-%d")
+    except (ValueError, TypeError, AttributeError):
+        return str(value) if value else ""
 
 
 @app.context_processor
