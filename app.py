@@ -20,11 +20,15 @@ from flask import (
     url_for,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_URL = os.getenv("DATABASE_URL")
+UPLOAD_FOLDER = BASE_DIR / "static" / "uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
 BOOK_SEED = [
     {
@@ -288,6 +292,37 @@ def slugify(value: str) -> str:
     if not value:
         value = f"book-{int(datetime.now().timestamp())}"
     return value
+
+
+def allowed_file(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def save_uploaded_file(file, subfolder: str = "") -> str | None:
+    """Save uploaded file and return the URL path, or None if failed."""
+    if not file or file.filename == "":
+        return None
+
+    if not allowed_file(file.filename):
+        return None
+
+    # Create upload directory if it doesn't exist
+    upload_dir = UPLOAD_FOLDER / subfolder if subfolder else UPLOAD_FOLDER
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate unique filename
+    filename = secure_filename(file.filename)
+    timestamp = int(datetime.now().timestamp())
+    name, ext = os.path.splitext(filename)
+    unique_filename = f"{name}_{timestamp}{ext}"
+
+    filepath = upload_dir / unique_filename
+    file.save(str(filepath))
+
+    # Return URL path
+    if subfolder:
+        return f"/static/uploads/{subfolder}/{unique_filename}"
+    return f"/static/uploads/{unique_filename}"
 
 TASK_SEED = [
     {
@@ -1037,9 +1072,23 @@ def admin_add_book():
     title = request.form.get("title", "").strip()
     author = request.form.get("author", "").strip()
     publisher = request.form.get("publisher", "").strip()
-    cover_url = request.form.get("cover_url", "").strip() or "https://placehold.co/320x180?text=Book"
     grade = request.form.get("grade", "").strip()
     slug_value = request.form.get("slug", "").strip() or slugify(title)
+
+    # Handle file upload or URL
+    cover_file = request.files.get("cover_file")
+    cover_url = request.form.get("cover_url", "").strip()
+
+    if cover_file and cover_file.filename:
+        uploaded_url = save_uploaded_file(cover_file, "covers")
+        if uploaded_url:
+            cover_url = uploaded_url
+        else:
+            flash("封面文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
+            return redirect(url_for("admin_dashboard"))
+
+    if not cover_url:
+        cover_url = "https://placehold.co/320x180?text=Book"
 
     if not title:
         flash("书名不能为空。", "error")
@@ -1544,14 +1593,25 @@ def settings_page():
             if action == "pet_name":
                 flash("宠物昵称已更新！", "success")
             elif action == "avatar":
+                # Handle file upload or URL
+                avatar_file = request.files.get("avatar_file")
+                avatar_url = request.form.get("avatar", "").strip()
+
+                if avatar_file and avatar_file.filename:
+                    uploaded_url = save_uploaded_file(avatar_file, "avatars")
+                    if uploaded_url:
+                        avatar_url = uploaded_url
+                    else:
+                        flash("头像文件格式不支持，请上传 PNG, JPG, GIF 或 WEBP 格式的图片。", "error")
+                        return redirect(url_for("settings_page"))
+
                 with conn.cursor() as cur:
-                    avatar_url = request.form.get("avatar", "").strip()
                     cur.execute(
                         "UPDATE users SET avatar = %s WHERE id = %s",
                         (avatar_url or None, user_id),
                     )
                 conn.commit()
-                flash("头像链接已更新。", "success")
+                flash("头像已更新。", "success")
             elif action == "username":
                 new_username = request.form.get("username", "").strip()
                 if not (3 <= len(new_username) <= 20):

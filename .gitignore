@@ -4,3 +4,12 @@ reading.db
 *.sqlite
 .env
 .venv/
+
+# Uploaded files (but keep directory structure)
+static/uploads/**/
+static/uploads/**/*.png
+static/uploads/**/*.jpg
+static/uploads/**/*.jpeg
+static/uploads/**/*.gif
+static/uploads/**/*.webp
+!static/uploads/**/.gitkeep
