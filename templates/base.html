@@ -16,6 +16,9 @@
             <li><a href="{{ url_for('tasks') }}">任务</a></li>
             <li><a href="{{ url_for('discussions') }}">讨论</a></li>
             <li><a href="{{ url_for('pet') }}">宠物</a></li>
+            {% if session.get('user_id') %}
+              <li><a href="{{ url_for('settings_page') }}">设置</a></li>
+            {% endif %}
             {% if session.get('is_admin') %}
               <li><a href="{{ url_for('admin_dashboard') }}">后台</a></li>
             {% endif %}

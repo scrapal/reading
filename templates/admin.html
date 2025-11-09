@@ -43,9 +43,17 @@
     </form>
     <div class="recent-books">
       <h4>最新添加</h4>
-      <ul>
+      <ul class="recent-book-list">
         {% for book in recent_books %}
-          <li>{{ book.title }} · {{ book.grade or '未分级' }} · <a href="{{ url_for('book_detail', slug=book.slug) }}" target="_blank">预览</a></li>
+          <li>
+            <span>{{ book.title }} · {{ book.grade or '未分级' }}</span>
+            <div class="book-actions">
+              <a class="ghost-btn" href="{{ url_for('book_detail', slug=book.slug) }}" target="_blank">预览</a>
+              <form class="inline-form" method="post" action="{{ url_for('admin_delete_book', book_id=book.id) }}">
+                <button class="danger-btn" type="submit">删除</button>
+              </form>
+            </div>
+          </li>
         {% else %}
           <li>暂无数据</li>
         {% endfor %}
@@ -136,7 +144,7 @@
               </td>
               <td>{% if user.is_admin %}管理员{% else %}普通用户{% endif %}</td>
               <td>{{ user.created_at|friendly_date }}</td>
-              <td>
+              <td class="admin-actions">
                 <form class="inline-form" method="post" action="{{ url_for('admin_toggle_user', user_id=user.id) }}">
                   {% if user.is_admin %}
                     <button class="ghost-btn" type="submit">移除管理员</button>
@@ -144,11 +152,36 @@
                     <button class="btn" type="submit">设为管理员</button>
                   {% endif %}
                 </form>
+                <form class="inline-form" method="post" action="{{ url_for('admin_delete_user', user_id=user.id) }}">
+                  <button class="danger-btn" type="submit">删除用户</button>
+                </form>
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+  </section>
+
+  <section class="card">
+    <div class="section-header">
+      <h3>用户玩具</h3>
+      <p>可删除指定用户的玩具使其从草坪中移除。</p>
+    </div>
+    <ul class="toy-admin-list">
+      {% for toy in admin_user_toys %}
+        <li>
+          <div>
+            <strong>{{ toy.username }}</strong>：{{ toy.toy_name }} {{ toy.icon }}
+            <small>放置时间 {{ toy.created_at|friendly_date }}</small>
+          </div>
+          <form class="inline-form" method="post" action="{{ url_for('admin_delete_user_toy', user_toy_id=toy.id) }}">
+            <button class="danger-btn" type="submit">移除玩具</button>
+          </form>
+        </li>
+      {% else %}
+        <li>目前没有用户玩具记录。</li>
+      {% endfor %}
+    </ul>
   </section>
 {% endblock %}

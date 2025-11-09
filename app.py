@@ -4,7 +4,7 @@ import os
 import random
 import re
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import (
@@ -490,6 +490,8 @@ def init_db() -> None:
         ensure_column(conn, "users", "coins", "INTEGER DEFAULT 0")
         ensure_column(conn, "users", "avatar", "TEXT")
         ensure_column(conn, "users", "is_admin", "INTEGER DEFAULT 0")
+        ensure_column(conn, "users", "language", "TEXT DEFAULT 'zh'")
+        ensure_column(conn, "users", "last_username_change", "TIMESTAMP")
         ensure_column(conn, "books", "author", "TEXT")
         ensure_column(conn, "books", "publisher", "TEXT")
         ensure_column(conn, "books", "grade", "TEXT")
@@ -646,6 +648,23 @@ def get_available_toys(user_id: int | None):
             "owned": owned_map.get(toy["id"], 0),
         })
     return result
+
+
+def get_all_user_toys(limit: int = 50):
+    with get_db_connection() as conn:
+        return conn.execute(
+            """
+            SELECT user_toys.id, user_toys.pos_x, user_toys.pos_y, user_toys.created_at,
+                   users.username, users.id AS owner_id,
+                   toys.name AS toy_name, toys.icon
+            FROM user_toys
+            JOIN users ON users.id = user_toys.user_id
+            JOIN toys ON toys.id = user_toys.toy_id
+            ORDER BY user_toys.created_at DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
 
 
 @app.template_filter("friendly_date")
@@ -846,6 +865,7 @@ def admin_dashboard():
         recent_books = conn.execute(
             "SELECT id, title, slug, grade FROM books ORDER BY created_at DESC LIMIT 12"
         ).fetchall()
+        user_toys = get_all_user_toys()
 
     grouped_comments = group_comments(comments)
     return render_template(
@@ -856,6 +876,7 @@ def admin_dashboard():
         admin_reflections=grouped_comments["reflection"],
         admin_users=users,
         recent_books=recent_books,
+        admin_user_toys=user_toys,
     )
 
 
@@ -894,6 +915,23 @@ def admin_add_book():
         conn.commit()
 
     flash("书籍信息已保存。", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/books/<int:book_id>/delete")
+def admin_delete_book(book_id: int):
+    require_admin()
+    with get_db_connection() as conn:
+        deleted = conn.execute(
+            "DELETE FROM books WHERE id = ?",
+            (book_id,),
+        )
+        conn.commit()
+
+    if deleted.rowcount:
+        flash("书籍已删除。", "success")
+    else:
+        flash("未找到该书籍。", "error")
     return redirect(url_for("admin_dashboard"))
 
 
@@ -969,6 +1007,54 @@ def admin_set_coins(user_id: int):
         flash("金币已更新。", "success")
     else:
         flash("未找到该用户。", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/users/<int:user_id>/delete")
+def admin_delete_user(user_id: int):
+    current_admin = require_admin()
+    if user_id == current_admin["id"]:
+        flash("不能删除当前登录的管理员账号。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    with get_db_connection() as conn:
+        user = conn.execute(
+            "SELECT id, username, is_admin FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        if not user:
+            flash("未找到该用户。", "error")
+            return redirect(url_for("admin_dashboard"))
+
+        if user["is_admin"]:
+            admin_count = conn.execute(
+                "SELECT COUNT(*) FROM users WHERE is_admin = 1"
+            ).fetchone()[0]
+            if admin_count <= 1:
+                flash("至少需要保留一名管理员。", "error")
+                return redirect(url_for("admin_dashboard"))
+
+        conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
+        conn.commit()
+
+    flash("用户账户已删除。", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/toys/<int:user_toy_id>/delete")
+def admin_delete_user_toy(user_toy_id: int):
+    require_admin()
+    with get_db_connection() as conn:
+        deleted = conn.execute(
+            "DELETE FROM user_toys WHERE id = ?",
+            (user_toy_id,),
+        )
+        conn.commit()
+
+    if deleted.rowcount:
+        flash("玩具已移除。", "success")
+    else:
+        flash("未找到该玩具记录。", "error")
     return redirect(url_for("admin_dashboard"))
 
 
@@ -1116,6 +1202,93 @@ def pet_buy_toy(slug: str):
 
     flash(f"已购买 {toy['name']}，它会出现在草坪上！", "success")
     return redirect(url_for("pet"))
+
+
+@app.route("/settings", methods=["GET", "POST"])
+def settings_page():
+    if not is_logged_in():
+        flash("请先登录。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    with get_db_connection() as conn:
+        user = conn.execute(
+            """
+            SELECT id, username, coins, is_admin, avatar, language, last_username_change
+            FROM users WHERE id = ?
+            """,
+            (user_id,),
+        ).fetchone()
+        pet = conn.execute(
+            "SELECT name FROM pets WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        with get_db_connection() as conn:
+            if action == "pet_name":
+                new_name = request.form.get("pet_name", "").strip()
+                if not (1 <= len(new_name) <= 20):
+                    flash("名称长度需在 1-20 个字符内。", "error")
+                    return redirect(url_for("settings_page"))
+                conn.execute(
+                    "INSERT INTO pets (user_id, name) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET name=excluded.name",
+                    (user_id, new_name),
+                )
+                conn.commit()
+                flash("宠物昵称已更新！", "success")
+            elif action == "avatar":
+                avatar_url = request.form.get("avatar", "").strip()
+                conn.execute(
+                    "UPDATE users SET avatar = ? WHERE id = ?",
+                    (avatar_url or None, user_id),
+                )
+                conn.commit()
+                flash("头像链接已更新。", "success")
+            elif action == "username":
+                new_username = request.form.get("username", "").strip()
+                if not (3 <= len(new_username) <= 20):
+                    flash("用户名需在 3-20 个字符之间。", "error")
+                    return redirect(url_for("settings_page"))
+                if new_username == user["username"]:
+                    flash("新用户名与当前相同。", "error")
+                    return redirect(url_for("settings_page"))
+                last_change_raw = user["last_username_change"]
+                if last_change_raw:
+                    try:
+                        last_change = datetime.fromisoformat(last_change_raw)
+                    except ValueError:
+                        last_change = None
+                else:
+                    last_change = None
+                if last_change and datetime.now() - last_change < timedelta(days=7):
+                    flash("用户名每 7 天只能修改一次。", "error")
+                    return redirect(url_for("settings_page"))
+                exists = conn.execute(
+                    "SELECT 1 FROM users WHERE username = ?",
+                    (new_username,),
+                ).fetchone()
+                if exists:
+                    flash("该用户名已被占用。", "error")
+                    return redirect(url_for("settings_page"))
+                conn.execute(
+                    "UPDATE users SET username = ?, last_username_change = CURRENT_TIMESTAMP WHERE id = ?",
+                    (new_username, user_id),
+                )
+                conn.commit()
+                session["username"] = new_username
+                flash("用户名已修改！", "success")
+            else:
+                flash("未知的设置操作。", "error")
+        return redirect(url_for("settings_page"))
+
+    pet_name = pet["name"] if pet else f"{user['username']}的小兽"
+    return render_template(
+        "settings.html",
+        user=user,
+        pet_name=pet_name,
+    )
 
 
 @app.route("/register", methods=["GET", "POST"])

@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}设置 · 阅读空间{% endblock %}
+{% block content %}
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h2>个人设置</h2>
+        <p>在这里自定义宠物昵称、头像、用户名以及界面语言。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="card settings-grid">
+    <div>
+      <h3>宠物昵称</h3>
+      <form class="settings-form" method="post" action="{{ url_for('settings_page') }}">
+        <input type="hidden" name="action" value="pet_name">
+        <label>昵称
+          <input name="pet_name" maxlength="20" value="{{ pet_name }}" required>
+        </label>
+        <button class="btn" type="submit">保存</button>
+      </form>
+    </div>
+
+    <div>
+      <h3>头像地址</h3>
+      <form class="settings-form" method="post" action="{{ url_for('settings_page') }}">
+        <input type="hidden" name="action" value="avatar">
+        <label>头像 URL
+          <input name="avatar" value="{{ user.avatar or '' }}" placeholder="https://example.com/avatar.png">
+        </label>
+        <button class="btn" type="submit">更新头像</button>
+      </form>
+    </div>
+
+    <div>
+      <h3>用户名</h3>
+      <p class="note">每 7 天可修改一次，长度 3-20 字符。</p>
+      <form class="settings-form" method="post" action="{{ url_for('settings_page') }}">
+        <input type="hidden" name="action" value="username">
+        <label>新用户名
+          <input name="username" minlength="3" maxlength="20" required>
+        </label>
+        <button class="btn" type="submit">修改用户名</button>
+      </form>
+    </div>
+
+  </section>
+{% endblock %}
