@@ -684,7 +684,7 @@ def get_comment_replies(comment_ids: list[int]):
     with get_db_connection() as conn:
         rows = conn.execute(
             f"""
-            SELECT comment_replies.id, comment_replies.comment_id, comment_replies.content,
+            SELECT comment_replies.id, comment_replies.comment_id, comment_replies.user_id, comment_replies.content,
                    comment_replies.created_at, users.username
             FROM comment_replies
             JOIN users ON users.id = comment_replies.user_id
@@ -843,7 +843,7 @@ def book_detail(slug: str):
 
         comments = conn.execute(
             """
-            SELECT comments.id, comments.content, comments.created_at, comments.category, users.username
+            SELECT comments.id, comments.user_id, comments.content, comments.created_at, comments.category, users.username
             FROM comments
             JOIN users ON users.id = comments.user_id
             WHERE comments.book_id = ?
@@ -868,7 +868,7 @@ def discussions():
     with get_db_connection() as conn:
         thread = conn.execute(
             """
-            SELECT comments.id, comments.content, comments.created_at, comments.category,
+            SELECT comments.id, comments.user_id, comments.content, comments.created_at, comments.category,
                    users.username, books.title, books.slug
             FROM comments
             JOIN users ON users.id = comments.user_id
@@ -1299,6 +1299,67 @@ def reply_comment(comment_id: int):
     flash("回复已发布。", "success")
     next_url = request.form.get("next")
     fallback = url_for("book_detail", slug=comment["slug"])
+    return redirect_to(next_url, fallback)
+
+
+@app.post("/comments/<int:comment_id>/delete")
+def delete_comment_user(comment_id: int):
+    if not is_logged_in():
+        flash("请先登录再删除评论。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    with get_db_connection() as conn:
+        comment = conn.execute(
+            """
+            SELECT comments.id, comments.user_id, books.slug
+            FROM comments
+            JOIN books ON books.id = comments.book_id
+            WHERE comments.id = ?
+            """,
+            (comment_id,),
+        ).fetchone()
+        if not comment:
+            abort(404)
+        if comment["user_id"] != user_id:
+            abort(403)
+        conn.execute("DELETE FROM comments WHERE id = ?", (comment_id,))
+        conn.commit()
+
+    flash("评论已删除。", "success")
+    next_url = request.form.get("next")
+    fallback = url_for("book_detail", slug=comment["slug"])
+    return redirect_to(next_url, fallback)
+
+
+@app.post("/replies/<int:reply_id>/delete")
+def delete_reply_user(reply_id: int):
+    if not is_logged_in():
+        flash("请先登录再删除回复。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+    with get_db_connection() as conn:
+        reply = conn.execute(
+            """
+            SELECT comment_replies.id, comment_replies.user_id, books.slug
+            FROM comment_replies
+            JOIN comments ON comments.id = comment_replies.comment_id
+            JOIN books ON books.id = comments.book_id
+            WHERE comment_replies.id = ?
+            """,
+            (reply_id,),
+        ).fetchone()
+        if not reply:
+            abort(404)
+        if reply["user_id"] != user_id:
+            abort(403)
+        conn.execute("DELETE FROM comment_replies WHERE id = ?", (reply_id,))
+        conn.commit()
+
+    flash("回复已删除。", "success")
+    next_url = request.form.get("next")
+    fallback = url_for("book_detail", slug=reply["slug"])
     return redirect_to(next_url, fallback)
 
 

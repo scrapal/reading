@@ -90,6 +90,17 @@ a {
   border-color: var(--primary);
 }
 
+.mini-btn.danger {
+  background: #fa5252;
+  color: #fff;
+  border-color: #fa5252;
+}
+
+.mini-btn.danger:hover {
+  background: #e03131;
+  color: #fff;
+}
+
 .main-content {
   padding: 2rem 0 3rem;
 }

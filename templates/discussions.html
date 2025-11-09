@@ -24,14 +24,28 @@
             <div class="comment-meta">
               <span>{{ comment.created_at|friendly_date }}</span>
               <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>
+              {% if session.get('user_id') == comment.user_id %}
+                <form class="inline-form" method="post" action="{{ url_for('delete_comment_user', comment_id=comment.id) }}">
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button class="mini-btn danger" type="submit">删除评论</button>
+                </form>
+              {% endif %}
             </div>
             {% set replies = replies_map.get(comment.id, []) %}
             {% if replies %}
               <ul class="reply-list">
                 {% for reply in replies %}
                   <li>
-                    <strong>{{ reply.username }}</strong>：{{ reply.content }}
-                    <span>{{ reply.created_at|friendly_date }}</span>
+                    <div>
+                      <strong>{{ reply.username }}</strong>：{{ reply.content }}
+                      <span>{{ reply.created_at|friendly_date }}</span>
+                    </div>
+                    {% if session.get('user_id') == reply.user_id %}
+                      <form class="inline-form" method="post" action="{{ url_for('delete_reply_user', reply_id=reply.id) }}">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button class="mini-btn danger" type="submit">删除</button>
+                      </form>
+                    {% endif %}
                   </li>
                 {% endfor %}
               </ul>
@@ -64,14 +78,28 @@
             <div class="comment-meta">
               <span>{{ comment.created_at|friendly_date }}</span>
               <a href="{{ url_for('book_detail', slug=comment.slug) }}">{{ comment.title }}</a>
+              {% if session.get('user_id') == comment.user_id %}
+                <form class="inline-form" method="post" action="{{ url_for('delete_comment_user', comment_id=comment.id) }}">
+                  <input type="hidden" name="next" value="{{ request.path }}">
+                  <button class="mini-btn danger" type="submit">删除评论</button>
+                </form>
+              {% endif %}
             </div>
             {% set replies = replies_map.get(comment.id, []) %}
             {% if replies %}
               <ul class="reply-list">
                 {% for reply in replies %}
                   <li>
-                    <strong>{{ reply.username }}</strong>：{{ reply.content }}
-                    <span>{{ reply.created_at|friendly_date }}</span>
+                    <div>
+                      <strong>{{ reply.username }}</strong>：{{ reply.content }}
+                      <span>{{ reply.created_at|friendly_date }}</span>
+                    </div>
+                    {% if session.get('user_id') == reply.user_id %}
+                      <form class="inline-form" method="post" action="{{ url_for('delete_reply_user', reply_id=reply.id) }}">
+                        <input type="hidden" name="next" value="{{ request.path }}">
+                        <button class="mini-btn danger" type="submit">删除</button>
+                      </form>
+                    {% endif %}
                   </li>
                 {% endfor %}
               </ul>
