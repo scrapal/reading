@@ -1,53 +1,36 @@
 {% extends 'base.html' %}
-{% block title %}住宿生验证码兑换 · 阅读空间{% endblock %}
+{% block title %}验证码兑换 · 阅读空间{% endblock %}
 {% block content %}
   <section class="card">
     <div class="section-header">
       <div>
-        <h2>住宿生验证码兑换</h2>
-        <p>输入老师提供的验证码，获取金币奖励并激活住宿生特权（工作日宠物衰减减半）。</p>
+        <h2>验证码兑换</h2>
       </div>
       <div class="coin-balance">当前金币：<strong>{{ user.coins }}</strong></div>
     </div>
 
     {% if is_boarder %}
       <div style="background: #d3f9d8; border: 1px solid #8ce99a; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-        <strong style="color: #0ca678;">✅ 住宿生状态已激活</strong>
+        <strong style="color: #0ca678;">✅ 已激活</strong>
         <p style="margin: 0.5rem 0 0; color: #495057;">
           有效期至：{{ boarder_until|friendly_date }}
-          <br>
-          <small>工作日期间您的宠物衰减速度减半，周末恢复正常速度。</small>
         </p>
       </div>
     {% else %}
       <div style="background: #fff3bf; border: 1px solid #fab005; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-        <strong style="color: #b35c00;">⚠️ 住宿生状态未激活</strong>
-        <p style="margin: 0.5rem 0 0; color: #495057;">
-          请输入验证码以激活住宿生特权。
-        </p>
+        <strong style="color: #b35c00;">⚠️ 未激活</strong>
       </div>
     {% endif %}
   </section>
 
   <section class="card form-card">
-    <h3>兑换验证码</h3>
+    <h3>请输入兑换验证码</h3>
     <form method="post">
-      <label>验证码（8位大写字母和数字）
-        <input type="text" name="code" placeholder="例如：ABC12345" maxlength="8" required style="text-transform: uppercase; font-family: monospace; font-size: 1.2rem; letter-spacing: 0.1em;">
+      <label>验证码
+        <input type="text" name="code" placeholder="ABC12345" maxlength="8" required style="text-transform: uppercase; font-family: monospace; font-size: 1.2rem; letter-spacing: 0.1em;">
       </label>
-      <button class="btn" type="submit">立即兑换</button>
+      <button class="btn" type="submit">兑换</button>
     </form>
-
-    <div style="margin-top: 1.5rem; padding: 1rem; background: #e7f5ff; border-radius: 8px;">
-      <strong style="color: var(--primary-dark);">💡 温馨提示</strong>
-      <ul style="margin: 0.5rem 0 0; padding-left: 1.5rem; color: #495057;">
-        <li>验证码由老师周五放学时提供</li>
-        <li>每个验证码仅可使用一次</li>
-        <li>兑换后立即获得金币并激活5天住宿生状态</li>
-        <li>住宿生状态期间，工作日宠物衰减速度减半</li>
-        <li>周末宠物衰减速度与走读生相同</li>
-      </ul>
-    </div>
   </section>
 
   {% if redemption_history %}
