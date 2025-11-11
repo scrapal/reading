@@ -754,7 +754,7 @@ def current_user():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, coins, is_admin FROM users WHERE id = %s",
+                "SELECT id, username, coins, is_admin, boarder_until FROM users WHERE id = %s",
                 (user_id,),
             )
             return cur.fetchone()
@@ -1045,7 +1045,15 @@ def friendly_date(value) -> str:
 
 @app.context_processor
 def inject_globals():
-    return {"category_labels": COMMENT_CATEGORIES}
+    is_current_boarder = False
+    if session.get("user_id"):
+        user = current_user()
+        if user:
+            is_current_boarder = is_boarder_active(user.get("boarder_until"))
+    return {
+        "category_labels": COMMENT_CATEGORIES,
+        "is_current_boarder": is_current_boarder,
+    }
 
 
 @app.route("/")
