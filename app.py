@@ -1185,7 +1185,7 @@ def admin_dashboard():
             cur.execute(
                 """
                 SELECT users.id, users.username, users.is_admin, users.created_at, users.coins,
-                       pets.appearance
+                       pets.appearance, pets.hunger, pets.happiness
                 FROM users
                 LEFT JOIN pets ON pets.user_id = users.id
                 ORDER BY users.created_at DESC
@@ -1495,6 +1495,63 @@ def admin_set_pet_appearance(user_id: int):
 
     if updated_count:
         flash("宠物样式已更新。", "success")
+    else:
+        flash("更新失败，请重试。", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.post("/admin/users/<int:user_id>/pet-stats")
+def admin_set_pet_stats(user_id: int):
+    require_admin()
+
+    try:
+        hunger = int(request.form.get("hunger", "50"))
+        happiness = int(request.form.get("happiness", "60"))
+    except ValueError:
+        flash("请输入有效的数值。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    # Clamp values between 0-100
+    hunger = clamp(hunger, 0, 100)
+    happiness = clamp(happiness, 0, 100)
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            # Check if user has a pet
+            cur.execute(
+                "SELECT id FROM pets WHERE user_id = %s",
+                (user_id,),
+            )
+            pet = cur.fetchone()
+
+            if pet:
+                # Update existing pet stats
+                cur.execute(
+                    "UPDATE pets SET hunger = %s, happiness = %s, last_care_at = CURRENT_TIMESTAMP WHERE user_id = %s",
+                    (hunger, happiness, user_id),
+                )
+                updated_count = cur.rowcount
+            else:
+                # Create pet with specified stats
+                cur.execute(
+                    "SELECT username FROM users WHERE id = %s",
+                    (user_id,),
+                )
+                user = cur.fetchone()
+                if user:
+                    cur.execute(
+                        "INSERT INTO pets (user_id, name, hunger, happiness) VALUES (%s, %s, %s, %s)",
+                        (user_id, f"{user['username']}的小兽", hunger, happiness),
+                    )
+                    updated_count = cur.rowcount
+                else:
+                    updated_count = 0
+
+        conn.commit()
+
+    if updated_count:
+        satiety = 100 - hunger
+        flash(f"宠物状态已更新：饱食度 {satiety}/100，快乐值 {happiness}/100。", "success")
     else:
         flash("更新失败，请重试。", "error")
     return redirect(url_for("admin_dashboard"))

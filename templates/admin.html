@@ -193,6 +193,7 @@
             <th>用户名</th>
             <th>金币</th>
             <th>宠物样式</th>
+            <th>宠物状态</th>
             <th>角色</th>
             <th>加入时间</th>
             <th>操作</th>
@@ -219,6 +220,21 @@
                       {% endfor %}
                     </select>
                     <button class="ghost-btn" type="submit">更新</button>
+                  </div>
+                </form>
+              </td>
+              <td>
+                <form class="inline-form pet-stats-form" method="post" action="{{ url_for('admin_set_pet_stats', user_id=user.id) }}">
+                  <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                    <div style="display: flex; gap: 0.3rem; align-items: center;">
+                      <label style="font-size: 0.85rem; min-width: 50px;">饥饿值</label>
+                      <input type="number" name="hunger" min="0" max="100" value="{{ user.hunger if user.hunger is not none else 50 }}" style="width: 60px;">
+                    </div>
+                    <div style="display: flex; gap: 0.3rem; align-items: center;">
+                      <label style="font-size: 0.85rem; min-width: 50px;">快乐值</label>
+                      <input type="number" name="happiness" min="0" max="100" value="{{ user.happiness if user.happiness is not none else 60 }}" style="width: 60px;">
+                    </div>
+                    <button class="ghost-btn" type="submit" style="font-size: 0.85rem;">保存</button>
                   </div>
                 </form>
               </td>
