@@ -280,4 +280,68 @@
       {% endfor %}
     </ul>
   </section>
+
+  <section class="card">
+    <div class="section-header">
+      <div>
+        <h3>住宿生验证码</h3>
+        <p>生成一次性验证码供住宿生兑换金币和激活5天住宿生状态（工作日宠物衰减减半）。</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 2rem;">
+      <h4>生成新验证码</h4>
+      <form class="admin-form" method="post" action="{{ url_for('admin_generate_boarder_code') }}" style="max-width: 600px;">
+        <label>生成数量（1-20）
+          <input type="number" name="count" min="1" max="20" value="1" required>
+        </label>
+        <label>金币奖励（1-500）
+          <input type="number" name="coins" min="1" max="500" value="75" required>
+        </label>
+        <button class="btn" type="submit">生成验证码</button>
+      </form>
+    </div>
+
+    <div>
+      <h4>未使用的验证码（最近20个）</h4>
+      <ul class="discussion-list">
+        {% for code in unused_codes %}
+          <li class="discussion-item">
+            <div style="flex: 1;">
+              <p class="comment-text">
+                <strong style="font-size: 1.2rem; color: var(--primary); font-family: monospace;">{{ code.code }}</strong>
+              </p>
+              <div class="comment-meta">
+                <span>奖励：{{ code.coins_reward }} 金币</span>
+                <span>生成于 {{ code.created_at|friendly_date }}</span>
+              </div>
+            </div>
+          </li>
+        {% else %}
+          <li style="padding: 1rem;">暂无未使用的验证码。</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div style="margin-top: 2rem;">
+      <h4>最近使用记录（最近20条）</h4>
+      <ul class="discussion-list">
+        {% for code in used_codes %}
+          <li class="discussion-item">
+            <div style="flex: 1;">
+              <p class="comment-text">
+                <strong style="font-family: monospace;">{{ code.code }}</strong> - {{ code.username }}
+              </p>
+              <div class="comment-meta">
+                <span>奖励：{{ code.coins_reward }} 金币</span>
+                <span>使用于 {{ code.used_at|friendly_date }}</span>
+              </div>
+            </div>
+          </li>
+        {% else %}
+          <li style="padding: 1rem;">暂无使用记录。</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
 {% endblock %}

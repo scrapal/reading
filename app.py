@@ -703,11 +703,27 @@ def init_db() -> None:
                 """
             )
 
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS boarder_codes (
+                    id SERIAL PRIMARY KEY,
+                    code TEXT UNIQUE NOT NULL,
+                    coins_reward INTEGER DEFAULT 75,
+                    is_used INTEGER DEFAULT 0,
+                    used_by INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    used_at TIMESTAMP,
+                    FOREIGN KEY (used_by) REFERENCES users(id) ON DELETE SET NULL
+                )
+                """
+            )
+
         ensure_column(conn, "users", "coins", "INTEGER DEFAULT 0")
         ensure_column(conn, "users", "avatar", "TEXT")
         ensure_column(conn, "users", "is_admin", "INTEGER DEFAULT 0")
         ensure_column(conn, "users", "language", "TEXT DEFAULT 'zh'")
         ensure_column(conn, "users", "last_username_change", "TIMESTAMP")
+        ensure_column(conn, "users", "boarder_until", "TIMESTAMP")
         ensure_column(conn, "books", "author", "TEXT")
         ensure_column(conn, "books", "publisher", "TEXT")
         ensure_column(conn, "books", "grade", "TEXT")
@@ -823,8 +839,13 @@ def clamp(value: int, min_value: int = 0, max_value: int = 100) -> int:
     return max(min_value, min(max_value, value))
 
 
-def calculate_pet_decay(last_care_at) -> tuple[int, int]:
-    """Calculate hunger and happiness decay based on days since last care."""
+def calculate_pet_decay(last_care_at, is_boarder: bool = False) -> tuple[int, int]:
+    """Calculate hunger and happiness decay based on days since last care.
+
+    Args:
+        last_care_at: Last time pet was cared for
+        is_boarder: Whether user is a boarder (slower decay on weekdays)
+    """
     if not last_care_at:
         return 0, 0
 
@@ -836,11 +857,28 @@ def calculate_pet_decay(last_care_at) -> tuple[int, int]:
     except (ValueError, TypeError, AttributeError):
         return 0, 0
 
-    days_passed = (datetime.now() - last_care).days
+    now = datetime.now()
+    total_hunger = 0
+    total_happiness_loss = 0
 
-    # Each day without interaction: +15 hunger, -10 happiness
-    hunger_increase = min(days_passed * 15, 50)  # Max 50 increase
-    happiness_decrease = min(days_passed * 10, 50)  # Max 50 decrease
+    # Calculate day by day to handle weekday/weekend differences for boarders
+    current = last_care
+    while current.date() < now.date():
+        current += timedelta(days=1)
+        weekday = current.weekday()  # 0=Monday, 6=Sunday
+
+        if is_boarder and weekday < 5:  # Monday-Friday for boarders
+            # Slower decay: half speed
+            total_hunger += 7.5  # 15 / 2
+            total_happiness_loss += 5  # 10 / 2
+        else:
+            # Normal decay (weekends for boarders, all days for non-boarders)
+            total_hunger += 15
+            total_happiness_loss += 10
+
+    # Cap the maximum decay
+    hunger_increase = min(int(total_hunger), 50)
+    happiness_decrease = min(int(total_happiness_loss), 50)
 
     return hunger_increase, happiness_decrease
 
@@ -859,6 +897,29 @@ def get_pet_mood(hunger: int, happiness: int) -> str:
 
     # Normal/happy
     return "normal"
+
+
+def is_boarder_active(boarder_until) -> bool:
+    """Check if user is currently an active boarder."""
+    if not boarder_until:
+        return False
+
+    try:
+        if isinstance(boarder_until, datetime):
+            until = boarder_until
+        else:
+            until = datetime.fromisoformat(str(boarder_until))
+        return datetime.now() < until
+    except (ValueError, TypeError, AttributeError):
+        return False
+
+
+def generate_boarder_code() -> str:
+    """Generate a unique 8-character boarder code."""
+    import secrets
+    import string
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(secrets.choice(chars) for _ in range(8))
 
 
 def normalize_category(value: str | None) -> str:
@@ -1208,6 +1269,33 @@ def admin_dashboard():
                 """
             )
             pending_requests = cur.fetchall()
+
+            # Get unused boarder codes
+            cur.execute(
+                """
+                SELECT code, coins_reward, created_at
+                FROM boarder_codes
+                WHERE is_used = 0
+                ORDER BY created_at DESC
+                LIMIT 20
+                """
+            )
+            unused_codes = cur.fetchall()
+
+            # Get recently used boarder codes
+            cur.execute(
+                """
+                SELECT boarder_codes.code, boarder_codes.coins_reward, boarder_codes.used_at,
+                       users.username
+                FROM boarder_codes
+                JOIN users ON users.id = boarder_codes.used_by
+                WHERE boarder_codes.is_used = 1
+                ORDER BY boarder_codes.used_at DESC
+                LIMIT 20
+                """
+            )
+            used_codes = cur.fetchall()
+
         user_toys = get_all_user_toys()
 
         grouped_comments = group_comments(comments)
@@ -1225,6 +1313,8 @@ def admin_dashboard():
             admin_replies=admin_replies,
             pending_requests=pending_requests,
             pet_appearances=PET_APPEARANCES,
+            unused_codes=unused_codes,
+            used_codes=used_codes,
         )
 
 
@@ -1557,6 +1647,138 @@ def admin_set_pet_stats(user_id: int):
     return redirect(url_for("admin_dashboard"))
 
 
+@app.post("/admin/generate-boarder-code")
+def admin_generate_boarder_code():
+    require_admin()
+
+    try:
+        count = int(request.form.get("count", "1"))
+        coins = int(request.form.get("coins", "75"))
+    except ValueError:
+        flash("请输入有效的数值。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    if count < 1 or count > 20:
+        flash("生成数量需在 1-20 之间。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    if coins < 1 or coins > 500:
+        flash("金币奖励需在 1-500 之间。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    generated_codes = []
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            for _ in range(count):
+                # Generate unique code
+                while True:
+                    code = generate_boarder_code()
+                    cur.execute(
+                        "SELECT 1 FROM boarder_codes WHERE code = %s",
+                        (code,),
+                    )
+                    if not cur.fetchone():
+                        break
+
+                cur.execute(
+                    "INSERT INTO boarder_codes (code, coins_reward) VALUES (%s, %s)",
+                    (code, coins),
+                )
+                generated_codes.append(code)
+        conn.commit()
+
+    flash(f"成功生成 {count} 个住宿生验证码（各 {coins} 金币）：{', '.join(generated_codes)}", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
+@app.route("/redeem-code", methods=["GET", "POST"])
+def redeem_boarder_code():
+    if not is_logged_in():
+        flash("请先登录。", "error")
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    if request.method == "POST":
+        code = request.form.get("code", "").strip().upper()
+
+        if not code:
+            flash("请输入验证码。", "error")
+            return redirect(url_for("redeem_boarder_code"))
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if code exists and is unused
+                cur.execute(
+                    "SELECT id, coins_reward, is_used FROM boarder_codes WHERE code = %s",
+                    (code,),
+                )
+                code_row = cur.fetchone()
+
+                if not code_row:
+                    flash("验证码无效。", "error")
+                    return redirect(url_for("redeem_boarder_code"))
+
+                if code_row["is_used"]:
+                    flash("该验证码已被使用。", "error")
+                    return redirect(url_for("redeem_boarder_code"))
+
+                # Mark code as used
+                cur.execute(
+                    "UPDATE boarder_codes SET is_used = 1, used_by = %s, used_at = CURRENT_TIMESTAMP WHERE id = %s",
+                    (user_id, code_row["id"]),
+                )
+
+                # Award coins
+                cur.execute(
+                    "UPDATE users SET coins = coins + %s WHERE id = %s",
+                    (code_row["coins_reward"], user_id),
+                )
+
+                # Set boarder status (5 days from now)
+                boarder_until = datetime.now() + timedelta(days=5)
+                cur.execute(
+                    "UPDATE users SET boarder_until = %s WHERE id = %s",
+                    (boarder_until, user_id),
+                )
+
+            conn.commit()
+
+        flash(f"验证码兑换成功！获得 {code_row['coins_reward']} 金币，住宿生状态已激活 5 天。", "success")
+        return redirect(url_for("redeem_boarder_code"))
+
+    # GET request: show redemption form and history
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT coins, boarder_until FROM users WHERE id = %s",
+                (user_id,),
+            )
+            user = cur.fetchone()
+
+            cur.execute(
+                """
+                SELECT code, coins_reward, used_at
+                FROM boarder_codes
+                WHERE used_by = %s
+                ORDER BY used_at DESC
+                LIMIT 10
+                """,
+                (user_id,),
+            )
+            redemption_history = cur.fetchall()
+
+    is_boarder = is_boarder_active(user.get("boarder_until"))
+
+    return render_template(
+        "redeem_code.html",
+        user=user,
+        is_boarder=is_boarder,
+        boarder_until=user.get("boarder_until"),
+        redemption_history=redemption_history,
+    )
+
+
 @app.post("/admin/book-requests/<int:request_id>/approve")
 def admin_approve_request(request_id: int):
     admin = require_admin()
@@ -1681,7 +1903,7 @@ def pet():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, coins FROM users WHERE id = %s",
+                "SELECT id, username, coins, boarder_until FROM users WHERE id = %s",
                 (user_id,),
             )
             user = cur.fetchone()
@@ -1704,8 +1926,11 @@ def pet():
                 )
                 pet_row = cur.fetchone()
 
-        # Apply daily decay
-        hunger_increase, happiness_decrease = calculate_pet_decay(pet_row["last_care_at"])
+        # Check if user is an active boarder
+        is_boarder = is_boarder_active(user.get("boarder_until"))
+
+        # Apply daily decay (slower for boarders on weekdays)
+        hunger_increase, happiness_decrease = calculate_pet_decay(pet_row["last_care_at"], is_boarder)
         if hunger_increase > 0 or happiness_decrease > 0:
             current_hunger = clamp(pet_row["hunger"] + hunger_increase)
             current_happiness = clamp(pet_row["happiness"] - happiness_decrease)
