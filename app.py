@@ -350,61 +350,81 @@ PET_APPEARANCES = [
         "id": "cat-orange",
         "name": "橙色小猫",
         "color": "#FF8C42",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 60 Q50 65 55 60" stroke="#000" stroke-width="2" fill="none"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 60 Q50 65 55 60" stroke="#000" stroke-width="2" fill="none"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 66 Q50 62 55 66" stroke="#000" stroke-width="2" fill="none"/><path d="M40 48 L44 52" stroke="#000" stroke-width="1.5"/><path d="M60 48 L56 52" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><ellipse cx="42" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="50" rx="4" ry="3" fill="#000"/><circle cx="50" cy="63" r="4" fill="#000"/></svg>'
     },
     {
         "id": "cat-blue",
         "name": "蓝色小猫",
         "color": "#4A90E2",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 60 Q50 65 55 60" stroke="#000" stroke-width="2" fill="none"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 60 Q50 65 55 60" stroke="#000" stroke-width="2" fill="none"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><path d="M45 66 Q50 62 55 66" stroke="#000" stroke-width="2" fill="none"/><path d="M40 48 L44 52" stroke="#000" stroke-width="1.5"/><path d="M60 48 L56 52" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><path d="M25 35 L20 15 L35 30 Z" fill="currentColor"/><path d="M75 35 L80 15 L65 30 Z" fill="currentColor"/><ellipse cx="42" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="50" rx="4" ry="3" fill="#000"/><circle cx="50" cy="63" r="4" fill="#000"/></svg>'
     },
     {
         "id": "dog-brown",
         "name": "棕色小狗",
         "color": "#A0826D",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M50 63 L45 70" stroke="#000" stroke-width="2"/><path d="M50 63 L55 70" stroke="#000" stroke-width="2"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M50 63 L45 70" stroke="#000" stroke-width="2"/><path d="M50 63 L55 70" stroke="#000" stroke-width="2"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M45 68 L50 65 L55 68" stroke="#000" stroke-width="2" fill="none"/><path d="M40 48 L44 52" stroke="#000" stroke-width="1.5"/><path d="M60 48 L56 52" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="42" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="50" cy="58" rx="5" ry="6" fill="#000"/><circle cx="50" cy="66" r="5" fill="#000"/></svg>'
     },
     {
         "id": "dog-pink",
         "name": "粉色小狗",
         "color": "#FFB6C1",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M50 63 L45 70" stroke="#000" stroke-width="2"/><path d="M50 63 L55 70" stroke="#000" stroke-width="2"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M50 63 L45 70" stroke="#000" stroke-width="2"/><path d="M50 63 L55 70" stroke="#000" stroke-width="2"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="58" rx="4" ry="5" fill="#000"/><path d="M45 68 L50 65 L55 68" stroke="#000" stroke-width="2" fill="none"/><path d="M40 48 L44 52" stroke="#000" stroke-width="1.5"/><path d="M60 48 L56 52" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><ellipse cx="25" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="75" cy="50" rx="8" ry="15" fill="currentColor"/><ellipse cx="42" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="50" cy="58" rx="5" ry="6" fill="#000"/><circle cx="50" cy="66" r="5" fill="#000"/></svg>'
     },
     {
         "id": "rabbit-white",
         "name": "白色兔子",
         "color": "#F5F5F5",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFB6C1"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFB6C1"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFB6C1"/><path d="M45 70 Q50 67 55 70" stroke="#000" stroke-width="2" fill="none"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor" stroke="#DDD" stroke-width="2"/><ellipse cx="42" cy="55" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="55" rx="4" ry="3" fill="#000"/><circle cx="50" cy="65" r="4" fill="#000"/></svg>'
     },
     {
         "id": "rabbit-purple",
         "name": "紫色兔子",
         "color": "#9B59B6",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFF"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFF"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor"/><circle cx="42" cy="55" r="3" fill="#000"/><circle cx="58" cy="55" r="3" fill="#000"/><circle cx="50" cy="65" r="3" fill="#FFF"/><path d="M45 70 Q50 67 55 70" stroke="#000" stroke-width="2" fill="none"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="60" rx="25" ry="28" fill="currentColor"/><ellipse cx="38" cy="25" rx="8" ry="22" fill="currentColor"/><ellipse cx="62" cy="25" rx="8" ry="22" fill="currentColor"/><ellipse cx="42" cy="55" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="55" rx="4" ry="3" fill="#000"/><circle cx="50" cy="65" r="4" fill="#FFF"/></svg>'
     },
     {
         "id": "bear-brown",
         "name": "棕色小熊",
         "color": "#8B4513",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#D2691E"/><path d="M45 66 Q50 70 55 66" stroke="#000" stroke-width="2" fill="none"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#D2691E"/><path d="M45 66 Q50 70 55 66" stroke="#000" stroke-width="2" fill="none"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#D2691E"/><path d="M45 70 Q50 67 55 70" stroke="#000" stroke-width="2" fill="none"/><path d="M40 48 L44 52" stroke="#000" stroke-width="1.5"/><path d="M60 48 L56 52" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><ellipse cx="42" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="50" cy="60" rx="6" ry="7" fill="#D2691E"/><circle cx="50" cy="68" r="4" fill="#000"/></svg>'
     },
     {
         "id": "bear-green",
         "name": "绿色小熊",
         "color": "#52C41A",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#A8E6A1"/><path d="M45 66 Q50 70 55 66" stroke="#000" stroke-width="2" fill="none"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#A8E6A1"/><path d="M45 66 Q50 70 55 66" stroke="#000" stroke-width="2" fill="none"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><circle cx="42" cy="50" r="3" fill="#000"/><circle cx="58" cy="50" r="3" fill="#000"/><ellipse cx="50" cy="60" rx="5" ry="6" fill="#A8E6A1"/><path d="M45 70 Q50 67 55 70" stroke="#000" stroke-width="2" fill="none"/><path d="M40 48 L44 52" stroke="#000" stroke-width="1.5"/><path d="M60 48 L56 52" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="55" r="30" fill="currentColor"/><circle cx="30" cy="35" r="12" fill="currentColor"/><circle cx="70" cy="35" r="12" fill="currentColor"/><ellipse cx="42" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="50" rx="4" ry="3" fill="#000"/><ellipse cx="50" cy="60" rx="6" ry="7" fill="#A8E6A1"/><circle cx="50" cy="68" r="4" fill="#000"/></svg>'
     },
     {
         "id": "penguin-black",
         "name": "企鹅宝宝",
         "color": "#2C3E50",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="55" rx="28" ry="35" fill="currentColor"/><ellipse cx="50" cy="60" rx="20" ry="28" fill="#FFF"/><circle cx="42" cy="45" r="3" fill="#000"/><circle cx="58" cy="45" r="3" fill="#000"/><path d="M47 52 L53 52 L50 56 Z" fill="#FFA500"/><ellipse cx="25" cy="60" rx="6" ry="15" fill="currentColor"/><ellipse cx="75" cy="60" rx="6" ry="15" fill="currentColor"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="55" rx="28" ry="35" fill="currentColor"/><ellipse cx="50" cy="60" rx="20" ry="28" fill="#FFF"/><circle cx="42" cy="45" r="3" fill="#000"/><circle cx="58" cy="45" r="3" fill="#000"/><path d="M47 52 L53 52 L50 56 Z" fill="#FFA500"/><ellipse cx="25" cy="60" rx="6" ry="15" fill="currentColor"/><ellipse cx="75" cy="60" rx="6" ry="15" fill="currentColor"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="55" rx="28" ry="35" fill="currentColor"/><ellipse cx="50" cy="60" rx="20" ry="28" fill="#FFF"/><circle cx="42" cy="45" r="3" fill="#000"/><circle cx="58" cy="45" r="3" fill="#000"/><path d="M47 52 L53 52 L50 56 Z" fill="#FFA500"/><ellipse cx="25" cy="60" rx="6" ry="15" fill="currentColor"/><ellipse cx="75" cy="60" rx="6" ry="15" fill="currentColor"/><path d="M40 43 L44 47" stroke="#000" stroke-width="1.5"/><path d="M60 43 L56 47" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="55" rx="28" ry="35" fill="currentColor"/><ellipse cx="50" cy="60" rx="20" ry="28" fill="#FFF"/><ellipse cx="42" cy="45" rx="4" ry="3" fill="#000"/><ellipse cx="58" cy="45" rx="4" ry="3" fill="#000"/><path d="M47 52 L53 52 L50 56 Z" fill="#FFA500"/><circle cx="50" cy="60" r="5" fill="#FFA500"/><ellipse cx="25" cy="60" rx="6" ry="15" fill="currentColor"/><ellipse cx="75" cy="60" rx="6" ry="15" fill="currentColor"/></svg>'
     },
     {
         "id": "bird-yellow",
         "name": "黄色小鸟",
         "color": "#FFD700",
-        "svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="50" r="25" fill="currentColor"/><circle cx="48" cy="45" r="3" fill="#000"/><circle cx="62" cy="45" r="3" fill="#000"/><path d="M52 52 L58 52 L55 56 Z" fill="#FF8C00"/><ellipse cx="25" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(-20 25 55)"/><ellipse cx="85" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(20 85 55)"/><path d="M55 75 L50 85 L52 75 L48 85 L55 75" fill="currentColor"/></svg>'
+        "normal_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="50" r="25" fill="currentColor"/><circle cx="48" cy="45" r="3" fill="#000"/><circle cx="62" cy="45" r="3" fill="#000"/><path d="M52 52 L58 52 L55 56 Z" fill="#FF8C00"/><ellipse cx="25" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(-20 25 55)"/><ellipse cx="85" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(20 85 55)"/><path d="M55 75 L50 85 L52 75 L48 85 L55 75" fill="currentColor"/></svg>',
+        "sad_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="50" r="25" fill="currentColor"/><circle cx="48" cy="45" r="3" fill="#000"/><circle cx="62" cy="45" r="3" fill="#000"/><path d="M52 52 L58 52 L55 56 Z" fill="#FF8C00"/><ellipse cx="25" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(-20 25 55)"/><ellipse cx="85" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(20 85 55)"/><path d="M55 75 L50 85 L52 75 L48 85 L55 75" fill="currentColor"/><path d="M46 43 L50 47" stroke="#000" stroke-width="1.5"/><path d="M64 43 L60 47" stroke="#000" stroke-width="1.5"/></svg>',
+        "hungry_svg": '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><circle cx="55" cy="50" r="25" fill="currentColor"/><ellipse cx="48" cy="45" rx="4" ry="3" fill="#000"/><ellipse cx="62" cy="45" rx="4" ry="3" fill="#000"/><path d="M52 52 L58 52 L55 56 Z" fill="#FF8C00"/><circle cx="55" cy="60" r="5" fill="#FF8C00"/><ellipse cx="25" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(-20 25 55)"/><ellipse cx="85" cy="55" rx="18" ry="8" fill="currentColor" transform="rotate(20 85 55)"/><path d="M55 75 L50 85 L52 75 L48 85 L55 75" fill="currentColor"/></svg>'
     },
 ]
 
@@ -801,6 +821,44 @@ def award_task_completion(user_id: int, task_code: str):
 
 def clamp(value: int, min_value: int = 0, max_value: int = 100) -> int:
     return max(min_value, min(max_value, value))
+
+
+def calculate_pet_decay(last_care_at) -> tuple[int, int]:
+    """Calculate hunger and happiness decay based on days since last care."""
+    if not last_care_at:
+        return 0, 0
+
+    try:
+        if isinstance(last_care_at, datetime):
+            last_care = last_care_at
+        else:
+            last_care = datetime.fromisoformat(str(last_care_at))
+    except (ValueError, TypeError, AttributeError):
+        return 0, 0
+
+    days_passed = (datetime.now() - last_care).days
+
+    # Each day without interaction: +15 hunger, -10 happiness
+    hunger_increase = min(days_passed * 15, 50)  # Max 50 increase
+    happiness_decrease = min(days_passed * 10, 50)  # Max 50 decrease
+
+    return hunger_increase, happiness_decrease
+
+
+def get_pet_mood(hunger: int, happiness: int) -> str:
+    """Determine pet mood based on stats."""
+    satiety = 100 - hunger
+
+    # Hungry takes priority if satiety is very low
+    if satiety < 30:
+        return "hungry"
+
+    # Sad if happiness is low
+    if happiness < 30:
+        return "sad"
+
+    # Normal/happy
+    return "normal"
 
 
 def normalize_category(value: str | None) -> str:
@@ -1589,6 +1647,21 @@ def pet():
                 )
                 pet_row = cur.fetchone()
 
+        # Apply daily decay
+        hunger_increase, happiness_decrease = calculate_pet_decay(pet_row["last_care_at"])
+        if hunger_increase > 0 or happiness_decrease > 0:
+            current_hunger = clamp(pet_row["hunger"] + hunger_increase)
+            current_happiness = clamp(pet_row["happiness"] - happiness_decrease)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE pets SET hunger = %s, happiness = %s WHERE id = %s",
+                    (current_hunger, current_happiness, pet_row["id"]),
+                )
+            conn.commit()
+            # Update pet_row with decayed values
+            pet_row["hunger"] = current_hunger
+            pet_row["happiness"] = current_happiness
+
         if request.method == "POST":
             action_key = request.form.get("action")
             action = PET_ACTIONS.get(action_key)
@@ -1624,8 +1697,21 @@ def pet():
         owned_toys = get_user_toys(user_id)
         toy_catalog = get_available_toys(user_id)
 
-        # Get pet appearance info
-        pet_appearance = next((p for p in PET_APPEARANCES if p["id"] == pet_row.get("appearance", "cat-orange")), PET_APPEARANCES[0])
+        # Get pet appearance info and select mood-based SVG
+        pet_config = next((p for p in PET_APPEARANCES if p["id"] == pet_row.get("appearance", "cat-orange")), PET_APPEARANCES[0])
+        pet_mood = get_pet_mood(pet_row["hunger"], pet_row["happiness"])
+
+        # Select appropriate SVG based on mood
+        svg_key = f"{pet_mood}_svg"
+        pet_svg = pet_config.get(svg_key, pet_config.get("normal_svg"))
+
+        pet_appearance = {
+            "id": pet_config["id"],
+            "name": pet_config["name"],
+            "color": pet_config["color"],
+            "svg": pet_svg,
+            "mood": pet_mood,
+        }
 
         return render_template(
             "pet.html",

@@ -17,7 +17,7 @@
           <label class="pet-option">
             <input type="radio" name="appearance" value="{{ pet.id }}" {% if loop.first %}checked{% endif %} required>
             <div class="pet-card" style="border-color: {{ pet.color }}">
-              <div class="pet-svg" style="color: {{ pet.color }}">{{ pet.svg|safe }}</div>
+              <div class="pet-svg" style="color: {{ pet.color }}">{{ pet.normal_svg|safe }}</div>
               <div class="pet-name">{{ pet.name }}</div>
             </div>
           </label>

@@ -6,6 +6,11 @@
       <div>
         <h2>{{ pet.name }}</h2>
         <p>使用金币来喂养/照顾宠物，保持饱腹与快乐。</p>
+        {% if pet_appearance.mood == 'hungry' %}
+          <p style="color: #fa5252; font-weight: 600;">⚠️ {{ pet.name }}饿了，快喂点东西吧！</p>
+        {% elif pet_appearance.mood == 'sad' %}
+          <p style="color: #868e96; font-weight: 600;">😢 {{ pet.name }}有点不开心，多陪陪它吧！</p>
+        {% endif %}
       </div>
       <div class="coin-balance">当前金币：<strong>{{ coins }}</strong></div>
     </div>
