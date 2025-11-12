@@ -8,19 +8,6 @@
       </div>
       <div class="coin-balance">当前金币：<strong>{{ user.coins }}</strong></div>
     </div>
-
-    {% if is_boarder %}
-      <div style="background: #d3f9d8; border: 1px solid #8ce99a; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-        <strong style="color: #0ca678;">✅ 已激活</strong>
-        <p style="margin: 0.5rem 0 0; color: #495057;">
-          有效期至：{{ boarder_until|friendly_date }}
-        </p>
-      </div>
-    {% else %}
-      <div style="background: #fff3bf; border: 1px solid #fab005; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-        <strong style="color: #b35c00;">⚠️ 未激活</strong>
-      </div>
-    {% endif %}
   </section>
 
   <section class="card form-card">
