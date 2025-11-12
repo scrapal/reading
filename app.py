@@ -724,6 +724,7 @@ def init_db() -> None:
         ensure_column(conn, "users", "language", "TEXT DEFAULT 'zh'")
         ensure_column(conn, "users", "last_username_change", "TIMESTAMP")
         ensure_column(conn, "users", "boarder_until", "TIMESTAMP")
+        ensure_column(conn, "users", "student_type", "TEXT DEFAULT 'day'")
         ensure_column(conn, "books", "author", "TEXT")
         ensure_column(conn, "books", "publisher", "TEXT")
         ensure_column(conn, "books", "grade", "TEXT")
@@ -754,7 +755,7 @@ def current_user():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, coins, is_admin, boarder_until FROM users WHERE id = %s",
+                "SELECT id, username, coins, is_admin, boarder_until, student_type FROM users WHERE id = %s",
                 (user_id,),
             )
             return cur.fetchone()
@@ -1049,7 +1050,7 @@ def inject_globals():
     if session.get("user_id"):
         user = current_user()
         if user:
-            is_current_boarder = is_boarder_active(user.get("boarder_until"))
+            is_current_boarder = (user.get("student_type") == "boarder")
     return {
         "category_labels": COMMENT_CATEGORIES,
         "is_current_boarder": is_current_boarder,
@@ -1254,7 +1255,7 @@ def admin_dashboard():
             cur.execute(
                 """
                 SELECT users.id, users.username, users.is_admin, users.created_at, users.coins,
-                       pets.appearance, pets.hunger, pets.happiness
+                       users.student_type, pets.appearance, pets.hunger, pets.happiness
                 FROM users
                 LEFT JOIN pets ON pets.user_id = users.id
                 ORDER BY users.created_at DESC
@@ -1655,6 +1656,32 @@ def admin_set_pet_stats(user_id: int):
     return redirect(url_for("admin_dashboard"))
 
 
+@app.post("/admin/users/<int:user_id>/student-type")
+def admin_set_student_type(user_id: int):
+    require_admin()
+    student_type = request.form.get("student_type", "").strip()
+
+    if student_type not in ["day", "boarder"]:
+        flash("请选择有效的学生类型。", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET student_type = %s WHERE id = %s",
+                (student_type, user_id),
+            )
+            updated_count = cur.rowcount
+        conn.commit()
+
+    if updated_count:
+        type_name = "走读生" if student_type == "day" else "住宿生"
+        flash(f"学生类型已更新为：{type_name}。", "success")
+    else:
+        flash("更新失败，请重试。", "error")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.post("/admin/generate-boarder-code")
 def admin_generate_boarder_code():
     require_admin()
@@ -1911,7 +1938,7 @@ def pet():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, coins, boarder_until FROM users WHERE id = %s",
+                "SELECT id, username, coins, student_type FROM users WHERE id = %s",
                 (user_id,),
             )
             user = cur.fetchone()
@@ -1934,8 +1961,8 @@ def pet():
                 )
                 pet_row = cur.fetchone()
 
-        # Check if user is an active boarder
-        is_boarder = is_boarder_active(user.get("boarder_until"))
+        # Check if user is a boarder (based on student_type)
+        is_boarder = (user.get("student_type") == "boarder")
 
         # Apply daily decay (slower for boarders on weekdays)
         hunger_increase, happiness_decrease = calculate_pet_decay(pet_row["last_care_at"], is_boarder)
@@ -2386,6 +2413,7 @@ def register():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
+        student_type = request.form.get("student_type", "day")
 
         if not username or not password:
             flash("用户名和密码都不能为空。", "error")
@@ -2395,6 +2423,9 @@ def register():
             flash("密码不少于6个字符。", "error")
             return redirect(url_for("register"))
 
+        if student_type not in ["day", "boarder"]:
+            student_type = "day"
+
         password_hash = generate_password_hash(password)
 
         try:
@@ -2403,8 +2434,8 @@ def register():
                     cur.execute("SELECT COUNT(*) as count FROM users")
                     existing_count = cur.fetchone()['count']
                     cur.execute(
-                        "INSERT INTO users (username, password_hash) VALUES (%s, %s) RETURNING id",
-                        (username, password_hash),
+                        "INSERT INTO users (username, password_hash, student_type) VALUES (%s, %s, %s) RETURNING id",
+                        (username, password_hash, student_type),
                     )
                     new_user_id = cur.fetchone()['id']
                     if existing_count == 0:

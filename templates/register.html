@@ -10,6 +10,18 @@
       <label for="password">密码</label>
       <input id="password" name="password" type="password" minlength="6" required>
 
+      <label>学生类型</label>
+      <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="radio" name="student_type" value="day" checked required>
+          <span>走读生</span>
+        </label>
+        <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+          <input type="radio" name="student_type" value="boarder" required>
+          <span>住宿生</span>
+        </label>
+      </div>
+
       <button class="btn" type="submit">注册</button>
     </form>
   </section>

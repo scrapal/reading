@@ -194,6 +194,7 @@
             <th>金币</th>
             <th>宠物样式</th>
             <th>宠物状态</th>
+            <th>学生类型</th>
             <th>角色</th>
             <th>加入时间</th>
             <th>操作</th>
@@ -236,6 +237,15 @@
                     </div>
                     <button class="ghost-btn" type="submit" style="font-size: 0.85rem;">保存</button>
                   </div>
+                </form>
+              </td>
+              <td>
+                <form class="inline-form" method="post" action="{{ url_for('admin_set_student_type', user_id=user.id) }}">
+                  <select name="student_type" required>
+                    <option value="day" {% if user.student_type == 'day' %}selected{% endif %}>走读生</option>
+                    <option value="boarder" {% if user.student_type == 'boarder' %}selected{% endif %}>住宿生</option>
+                  </select>
+                  <button class="ghost-btn" type="submit">更新</button>
                 </form>
               </td>
               <td>{% if user.is_admin %}管理员{% else %}普通用户{% endif %}</td>
