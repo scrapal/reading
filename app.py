@@ -730,6 +730,7 @@ def init_db() -> None:
         ensure_column(conn, "books", "grade", "TEXT")
         ensure_column(conn, "comments", "category", "TEXT DEFAULT 'discussion'")
         ensure_column(conn, "pets", "appearance", "TEXT DEFAULT 'cat-orange'")
+        ensure_column(conn, "book_requests", "rejection_reason", "TEXT")
         seed_books(conn)
         seed_tasks(conn)
         seed_toys(conn)
@@ -1871,16 +1872,17 @@ def admin_approve_request(request_id: int):
 @app.post("/admin/book-requests/<int:request_id>/reject")
 def admin_reject_request(request_id: int):
     admin = require_admin()
+    rejection_reason = request.form.get("rejection_reason", "").strip()
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """
                 UPDATE book_requests
-                SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP, reviewed_by = %s
+                SET status = 'rejected', reviewed_at = CURRENT_TIMESTAMP, reviewed_by = %s, rejection_reason = %s
                 WHERE id = %s AND status = 'pending'
                 """,
-                (admin["id"], request_id),
+                (admin["id"], rejection_reason if rejection_reason else None, request_id),
             )
             updated_count = cur.rowcount
         conn.commit()
@@ -2306,7 +2308,7 @@ def request_book():
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, title, author, publisher, grade, status, created_at
+                SELECT id, title, author, publisher, grade, status, created_at, rejection_reason
                 FROM book_requests
                 WHERE user_id = %s
                 ORDER BY created_at DESC

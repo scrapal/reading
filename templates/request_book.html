@@ -58,6 +58,11 @@
                 <span class="category-pill" style="background: #f44336;">已拒绝</span>
               {% endif %}
             </div>
+            {% if req.status == 'rejected' and req.rejection_reason %}
+              <p style="margin-top: 0.5rem; padding: 0.5rem; background: #ffebee; border-radius: 4px; color: #c62828; font-size: 0.9rem;">
+                <strong>拒绝原因：</strong>{{ req.rejection_reason }}
+              </p>
+            {% endif %}
           </div>
         </li>
       {% endfor %}
