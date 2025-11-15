@@ -30,6 +30,12 @@
         <div class="auth-links">
           {% if session.get('user_id') %}
             <span class="welcome">你好，{{ session['username'] }}</span>
+            {% if current_user %}
+              <span class="user-stats">
+                <span class="stat-item" title="连续打卡天数">🔥 {{ current_user.streak_count or 0 }}</span>
+                <span class="stat-item" title="金币余额">💰 {{ current_user.coins or 0 }}</span>
+              </span>
+            {% endif %}
             <a class="mini-btn" href="{{ url_for('logout') }}">退出</a>
           {% else %}
             <a class="mini-btn" href="{{ url_for('login') }}">登录</a>

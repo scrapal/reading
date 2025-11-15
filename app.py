@@ -328,7 +328,7 @@ TASK_SEED = [
     {
         "code": "read_checkin",
         "name": "读书打卡",
-        "description": "上传今日阅读进度，保持连续专注。",
+        "description": "上传今日阅读进度，保持连续专注。完成即可火苗 +1！",
         "coins_reward": 10,
     },
     {
@@ -725,6 +725,8 @@ def init_db() -> None:
         ensure_column(conn, "users", "last_username_change", "TIMESTAMP")
         ensure_column(conn, "users", "boarder_until", "TIMESTAMP")
         ensure_column(conn, "users", "student_type", "TEXT DEFAULT 'day'")
+        ensure_column(conn, "users", "streak_count", "INTEGER DEFAULT 0")
+        ensure_column(conn, "users", "last_checkin_date", "DATE")
         ensure_column(conn, "books", "author", "TEXT")
         ensure_column(conn, "books", "publisher", "TEXT")
         ensure_column(conn, "books", "grade", "TEXT")
@@ -756,7 +758,7 @@ def current_user():
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, coins, is_admin, boarder_until, student_type FROM users WHERE id = %s",
+                "SELECT id, username, coins, is_admin, boarder_until, student_type, streak_count FROM users WHERE id = %s",
                 (user_id,),
             )
             return cur.fetchone()
@@ -833,6 +835,26 @@ def award_task_completion(user_id: int, task_code: str):
                 "UPDATE users SET coins = coins + %s WHERE id = %s",
                 (task["coins_reward"], user_id),
             )
+
+            # Update streak if this is a check-in task
+            if task_code == "read_checkin":
+                from datetime import date
+                cur.execute(
+                    "SELECT streak_count, last_checkin_date, boarder_until FROM users WHERE id = %s",
+                    (user_id,),
+                )
+                user = cur.fetchone()
+                current_streak = user.get("streak_count", 0) or 0
+                last_checkin = user.get("last_checkin_date")
+                is_boarder = is_boarder_active(user.get("boarder_until"))
+
+                new_streak = calculate_streak(last_checkin, current_streak, is_boarder)
+
+                cur.execute(
+                    "UPDATE users SET streak_count = %s, last_checkin_date = %s WHERE id = %s",
+                    (new_streak, date.today(), user_id),
+                )
+
         conn.commit()
         return task
 
@@ -883,6 +905,68 @@ def calculate_pet_decay(last_care_at, is_boarder: bool = False) -> tuple[int, in
     happiness_decrease = min(int(total_happiness_loss), 50)
 
     return hunger_increase, happiness_decrease
+
+
+def calculate_streak(last_checkin_date, current_streak: int, is_boarder: bool = False) -> int:
+    """Calculate streak count based on last check-in date.
+
+    Args:
+        last_checkin_date: Last check-in date (DATE type)
+        current_streak: Current streak count
+        is_boarder: Whether user is a boarder (no reset on weekdays)
+
+    Returns:
+        New streak count (0 if broken, current+1 if continued)
+    """
+    if not last_checkin_date:
+        return 1  # First check-in
+
+    try:
+        if isinstance(last_checkin_date, datetime):
+            last_date = last_checkin_date.date()
+        elif isinstance(last_checkin_date, str):
+            last_date = datetime.strptime(last_checkin_date, '%Y-%m-%d').date()
+        else:
+            last_date = last_checkin_date
+    except (ValueError, TypeError, AttributeError):
+        return 1  # Invalid date, start fresh
+
+    from datetime import date
+    today = date.today()
+
+    # Same day, no change
+    if last_date == today:
+        return current_streak
+
+    # Calculate days difference
+    days_diff = (today - last_date).days
+
+    # Consecutive day (yesterday)
+    if days_diff == 1:
+        return current_streak + 1
+
+    # More than 1 day gap - check if should reset
+    if days_diff > 1:
+        # If boarder, check if all skipped days were weekdays
+        if is_boarder:
+            should_reset = False
+            # Check each day between last_date and today
+            for i in range(1, days_diff):
+                check_date = last_date + timedelta(days=i)
+                weekday = check_date.weekday()  # 0=Monday, 6=Sunday
+                # If any skipped day was weekend, reset streak
+                if weekday >= 5:  # Saturday or Sunday
+                    should_reset = True
+                    break
+
+            if not should_reset:
+                # All skipped days were weekdays, continue streak
+                return current_streak + 1
+
+        # Non-boarder or boarder with weekend gap - reset
+        return 0
+
+    return current_streak
 
 
 def get_pet_mood(hunger: int, happiness: int) -> str:
@@ -1048,13 +1132,16 @@ def friendly_date(value) -> str:
 @app.context_processor
 def inject_globals():
     is_current_boarder = False
+    user_data = None
     if session.get("user_id"):
         user = current_user()
         if user:
             is_current_boarder = (user.get("student_type") == "boarder")
+            user_data = user
     return {
         "category_labels": COMMENT_CATEGORIES,
         "is_current_boarder": is_current_boarder,
+        "current_user": user_data,
     }
 
 
@@ -1771,16 +1858,16 @@ def redeem_boarder_code():
                     (code_row["coins_reward"], user_id),
                 )
 
-                # Set boarder status (5 days from now)
+                # Set boarder status (5 days from now) and add 5 to streak
                 boarder_until = datetime.now() + timedelta(days=5)
                 cur.execute(
-                    "UPDATE users SET boarder_until = %s WHERE id = %s",
+                    "UPDATE users SET boarder_until = %s, streak_count = streak_count + 5 WHERE id = %s",
                     (boarder_until, user_id),
                 )
 
             conn.commit()
 
-        flash(f"验证码兑换成功！获得 {code_row['coins_reward']} 金币，住宿生状态已激活 5 天。", "success")
+        flash(f"验证码兑换成功！获得 {code_row['coins_reward']} 金币，火苗 +5，住宿生状态已激活 5 天。", "success")
         return redirect(url_for("redeem_boarder_code"))
 
     # GET request: show redemption form and history
@@ -1924,7 +2011,10 @@ def complete_task(task_id: int):
 
     awarded = award_task_completion(user_id, task["code"])
     if awarded:
-        flash(f"任务完成，获得 {awarded['coins_reward']} 金币！", "success")
+        if task["code"] == "read_checkin":
+            flash(f"任务完成，获得 {awarded['coins_reward']} 金币，火苗 +1！", "success")
+        else:
+            flash(f"任务完成，获得 {awarded['coins_reward']} 金币！", "success")
     else:
         flash("今天已经完成过该任务啦，明天再来！", "info")
     return redirect(url_for("tasks"))

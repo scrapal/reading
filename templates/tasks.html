@@ -1,6 +1,24 @@
 {% extends 'base.html' %}
 {% block title %}任务中心 · 阅读空间{% endblock %}
 {% block content %}
+  {% if user and current_user %}
+  <section class="card streak-card">
+    <div style="text-align: center;">
+      <div class="streak-display">
+        <span class="streak-icon">🔥</span>
+        <div class="streak-info">
+          <div class="streak-number">{{ current_user.streak_count or 0 }}</div>
+          <div class="streak-label">连续打卡天数</div>
+        </div>
+      </div>
+      <p class="streak-description">
+        每天完成"读书打卡"任务火苗 +1，断签归零。
+        {% if is_current_boarder %}住宿生兑换验证码可获得 +5 火苗，工作日（周一至周五）不会因未打卡而断签。{% endif %}
+      </p>
+    </div>
+  </section>
+  {% endif %}
+
   <section class="card">
     <div class="section-header">
       <div>
